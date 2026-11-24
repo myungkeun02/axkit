@@ -109,10 +109,11 @@ export async function installOnMac(deps: InstallMacDeps, config: Config, publicU
       phone.say(`✓ ${target.name}에 설치했어요. 그 맥에서 앱이 열리고 비서와 연결돼요.`);
       return 0;
     }
-    // "No ED25519 host key is known…": the Mac's Tailscale does not take SSH (the App Store / standalone Mac app cannot)
     phone.say('');
-    phone.say(`${target.name}에는 원격으로 들어가지 못했어요. 위에 영어 오류(예: "No ED25519 host key")가 보여도 괜찮아요 — 맥용 Tailscale 앱은 원격 접속(SSH)을 받지 못하는 경우가 많아서 그래요.`);
-    phone.say('대신 그 맥에서 아래 한 줄만 실행하면 똑같이 설치·연결돼요.');
+    phone.say(`${target.name}에 원격으로 들어가지 못했어요. 그 맥에서 딱 한 번만 이렇게 켜 주세요:`);
+    phone.say('  시스템 설정 › 일반 › 공유 › "원격 로그인" 켜기 (아래 "모든 사용자" 또는 내 사용자 허용)');
+    phone.say(`켠 뒤 이 맥에서 다시: ax-kit phone install-mac --to ${target.name}  (그 맥 사용자의 암호를 물으면 입력)`);
+    phone.say('지금 그 맥 앞에 있다면, 아래 한 줄을 그 맥 터미널에 붙여 넣어도 똑같이 설치·연결돼요.');
   }
   phone.say(`${target?.name ?? '그 맥'}의 터미널(응용 프로그램 › 유틸리티 › 터미널)에 아래 한 줄을 붙여 넣고 엔터를 눌러 주세요. 앱을 받아 설치하고 연결까지 해요 (10분 안에, 한 번만):`);
   phone.say(`  ${command}`);

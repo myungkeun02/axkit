@@ -13,7 +13,7 @@ import type { FunnelDeps } from './funnel.js';
 import type { PhoneCliDeps } from './phone.js';
 import type { ApkBuilder } from './phone-app.js';
 import { createTtyPrompter } from './prompter.js';
-import { findTailscale, tailscaleStatus } from './tailscale.js';
+import { tailscaleStatus } from './tailscale.js';
 import { installOnMac } from './install-mac.js';
 import { openQrPage } from './qr-page.js';
 import { runAttached } from './update.js';
@@ -104,7 +104,9 @@ export function phoneDeps(home: string): PhoneCliDeps {
           exec: execFileResult,
           exists: async (path) => await access(path).then(() => true, () => false),
           // the owner's Tailscale SSH (no keys here); output shows as it runs
-          ssh: async (target, command) => await runAttached((await findTailscale(execFileResult)) ?? 'tailscale', ['ssh', target, '--', 'bash', '-c', command]),
+          // macOS's own Remote Login, reached over the tailnet: the Mac Tailscale app cannot take Tailscale SSH
+          // ("No ED25519 host key is known"); the owner types that Mac's password here if it asks
+          ssh: async (target, command) => await runAttached('/usr/bin/ssh', ['-o', 'StrictHostKeyChecking=accept-new', '-o', 'ConnectTimeout=15', target, command]),
         },
         config,
         publicUrl,
