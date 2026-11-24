@@ -70,15 +70,16 @@ export function driveView(deps: { sources: () => readonly FileSource[]; clock: C
             title: entry.name,
             detail: [folderOf(entry.path), ...(multi ? [account] : [])].join(' · '),
             trailing: clockTime(entry.modifiedAt, deps.timeZone),
-            message: `드라이브의 "${entry.name}" 내용을 요약해 줘`,
+            message: `드라이브의 "${entry.name}" 파일로 할 일을 골라 줘: 요약하기, 또는 내 지식 문서에 반영하기`,
           })),
         });
       }
       if (found.length === 0) blocks.push({ kind: 'text', text: `최근 ${VIEW_DAYS}일 동안 바뀐 내 드라이브 파일이 없어요.` });
       for (const account of failed) blocks.push({ kind: 'note', text: `${account}의 드라이브를 지금 읽지 못했어요. 잠시 뒤 다시 열어 주세요.` });
-      blocks.push({ kind: 'note', text: '내가 만든 파일만 보여요(공유받은 파일은 빠져요). 파일 이름을 말하면 비서가 찾아서 요약해 줘요.' });
+      blocks.push({ kind: 'note', text: '내가 만든 파일만 보여요(공유받은 파일은 빠져요). 파일을 누르면 요약하거나, 그 내용으로 내 지식 문서(프로필·프로젝트)를 고칠 수 있어요. 고치기 전에는 바뀌는 줄을 보여 주고 물어봐요.' });
       blocks.push({ kind: 'ask', title: '최근 문서 요약 부탁하기', message: '드라이브에서 최근에 바뀐 문서들 요약해 줘' });
       blocks.push({ kind: 'ask', title: '드라이브에서 파일 찾기', message: '드라이브에서 파일 찾아 줘' });
+      blocks.push({ kind: 'ask', title: '파일로 내 지식 문서 고치기', message: '드라이브 파일 하나로 내 지식 문서를 고치고 싶어. 어떤 파일로 할지 물어봐 줘' });
       const value = { title: '드라이브', blocks };
       // a failed account is asked again on the next open
       if (failed.length === 0) cached = { at: now.getTime(), value };

@@ -1,5 +1,6 @@
 /** Where a knowledge line came from. Lower ranks never replace a line the owner corrected. */
-export type KnowledgeOrigin = 'scan' | 'memory' | 'correction';
+/** `file`: learned from a file the owner chose and approved; scans and memory never replace it. */
+export type KnowledgeOrigin = 'scan' | 'memory' | 'file' | 'correction';
 
 /**
  * "profile" lines describe the owner, "project" lines describe one project (topic = project name), anything else is a

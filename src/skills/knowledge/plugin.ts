@@ -9,6 +9,7 @@ import { knowledgeTexts } from './locale.js';
 import { profileSummary, reviewLines } from './profile.js';
 import { KnowledgeStore } from './store.js';
 import { knowledgeReadTool, knowledgeSearchTool } from './tools.js';
+import { Proposals, learnApplyTool, learnPreviewTool } from './learn.js';
 import { DocWriter, NODE_DOC_FS } from './writer.js';
 import { knowledgeView } from './view.js';
 import { docGraphView } from './graph.js';
@@ -104,6 +105,9 @@ export function knowledgeSkill(opts: KnowledgeSkillOptions = {}): Plugin {
       ctx.provide(Contracts.knowledgeWrite, knowledgeWriter);
       ctx.registerTool(knowledgeSearchTool({ store, texts }));
       ctx.registerTool(knowledgeReadTool({ builder }));
+      const proposals = new Proposals(() => ctx.clock.now().getTime());
+      ctx.registerTool(learnPreviewTool({ ctx, store, proposals }));
+      ctx.registerTool(learnApplyTool({ store, proposals, rebuild: async () => { await enqueue(() => builder.rebuild()); } }));
 
       ctx.bus.on('review.answer', async (answer) => {
         if (answer.reviewId !== 'knowledge.profile' || answer.verdict === 'confirmed') return;

@@ -47,7 +47,7 @@ describe('knowledgeSkill', () => {
     expect(knowledgeSkill().manifest).toMatchObject({ id: 'skill.knowledge', kind: 'skill', title: 'Knowledge base' });
     expect(context.provided.has(Contracts.knowledgeProfile.id)).toBe(true);
     expect(context.provided.has(Contracts.knowledgeWrite.id)).toBe(true);
-    expect(context.registry.list().map((tool) => tool.name).sort()).toEqual(['knowledge.read', 'knowledge.search']);
+    expect(context.registry.list().map((tool) => tool.name).sort()).toEqual(['knowledge.learn_apply', 'knowledge.learn_preview', 'knowledge.read', 'knowledge.search']);
     expect(context.scheduler.jobs.get('knowledge.rebuild')?.schedule).toEqual({ kind: 'daily', at: '04:50' });
   });
 

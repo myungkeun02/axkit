@@ -884,3 +884,9 @@ Ctrl+C나, 5분 넘게 남았을 때 한 번 묻는 "백그라운드로 두고 �
 - 기능 `drive`(구글 드라이브가 연결돼 있을 때만). `capabilities.views[]`에 `{name:"drive", version:1, ui:"blocks", title:"드라이브", icon:"externaldrive"}`. 앱 변경 없이 §14 블록으로 그려짐.
 - `GET views/drive` → `{title:"드라이브", blocks}`: `stat` "최근 30일 동안 바뀐 내 파일", 날짜별 `list`(제목 `오늘 · 3건`), 줄마다 `{title: 파일 이름, detail: "폴더 · 계정", trailing: "14:05", message}`, 끝에 `note`와 `ask` 두 개. 계정이 둘 이상이면 `detail`에 계정 주소. 5분 캐시.
 - **새 필드 `rows[].message`**(선택, 모든 blocks 화면에 쓸 수 있음): 그 줄을 누르면 앱이 이 문장을 대화로 보낸다(`ask` 블록과 같은 동작). 없으면 누를 수 없는 줄. 모르는 앱은 무시해도 된다.
+
+## 35. 파일로 지식 문서 고치기 (2026-11-24)
+
+- 서버만 바뀜. 대화 도구 `knowledge.learn_preview {name | source+id}`(읽기: 파일을 읽고 넣을·고칠 줄 목록 제안)와 `knowledge.learn_apply {proposal_id, skip?}`(쓰기, 항상 결재 카드: 카드 본문에 바뀌는 줄과 지금 내용).
+- 승인된 줄은 `origin:"file"`, `sources:["Drive: 파일 이름"]`로 지식 문서에 들어감(§5.3 `knowledge` 뷰의 `origin`에 `"file"`이 새로 올 수 있음 — 모르는 값은 "추정"처럼 보여 주면 됨). 처음 알아보기·기억 정리가 다시 돌아도 지워지지 않고, 오너가 고친 줄은 덮지 않음. 지식 화면의 "틀림"으로 고칠 수 있음.
+- 드라이브 화면(§34) 줄의 `message`는 "요약하기 / 지식 문서에 반영하기" 중 고르게 묻는 문장으로 바뀜.

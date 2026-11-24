@@ -1,9 +1,10 @@
 import { describe, expect, it } from 'vitest';
 import type { FileEntry, FileSource } from '../../core/contracts/files.js';
+import type { Clock } from '../../core/scheduler/types.js';
 import { driveView } from './drive-view.js';
 
 const NOW = new Date('2026-11-24T12:00:00+09:00');
-const clock = { now: () => NOW };
+const clock = { now: () => NOW, setTimeout, clearTimeout } as unknown as Clock;
 const entry = (name: string, modifiedAt: string): FileEntry => ({ id: name, name, path: `Drive/Plans/${name}`, size: 1, modifiedAt });
 const source = (label: string, entries: FileEntry[] | Error, title?: string): FileSource => ({
   label,
@@ -29,7 +30,7 @@ describe('drive view', () => {
       clock,
       timeZone: 'Asia/Seoul',
     });
-    const { blocks } = (await view.read()) as { blocks: Blocks };
+    const { blocks } = (await view.read(new URLSearchParams())) as { blocks: Blocks };
     const lists = blocks.filter((block) => block.kind === 'list');
     expect(lists.map((list) => list.title)).toEqual(['오늘 · 1건', '어제 · 1건']);
     expect(lists[0]?.rows?.[0]).toMatchObject({ title: 'budget.xlsx', detail: 'Drive/Plans · work@y.test' });
@@ -39,8 +40,8 @@ describe('drive view', () => {
 
   it('says which account could not be read and explains when Drive is not connected', async () => {
     const view = driveView({ sources: () => [source('drive', [entry('a', '2026-11-24T01:00:00Z')]), source('drive:a2', new Error('x'), 'Google Drive · work@y.test')], clock, timeZone: 'Asia/Seoul' });
-    expect(JSON.stringify(await view.read())).toContain('work@y.test의 드라이브를 지금 읽지 못했어요');
+    expect(JSON.stringify(await view.read(new URLSearchParams()))).toContain('work@y.test의 드라이브를 지금 읽지 못했어요');
     const none = driveView({ sources: () => [], clock, timeZone: 'Asia/Seoul' });
-    expect(JSON.stringify(await none.read())).toContain('연결돼 있지 않아요');
+    expect(JSON.stringify(await none.read(new URLSearchParams()))).toContain('연결돼 있지 않아요');
   });
 });

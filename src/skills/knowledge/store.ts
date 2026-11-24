@@ -28,7 +28,7 @@ function isStoredLine(value: unknown): value is StoredLine {
     typeof value['key'] === 'string' &&
     typeof value['text'] === 'string' &&
     typeof value['at'] === 'string' &&
-    (origin === 'scan' || origin === 'memory' || origin === 'correction') &&
+    (origin === 'scan' || origin === 'memory' || origin === 'file' || origin === 'correction') &&
     (value['removed'] === undefined || value['removed'] === true) &&
     Array.isArray(value['sources']) &&
     value['sources'].every((source) => typeof source === 'string')
@@ -123,6 +123,33 @@ export class KnowledgeStore {
     this.prune();
     if (changed) await this.persist();
     return { added, retired };
+  }
+
+  /**
+   * Lines the owner approved from a file: each replaces an inferred line with the same id; a line the owner corrected
+   * stays as it is. Resolves to the lines put in and the ids left out because of a correction.
+   */
+  async addFileLines(lines: readonly KnowledgeLine[]): Promise<{ added: number; kept: string[] }> {
+    const next = [...this.lines];
+    const kept: string[] = [];
+    let added = 0;
+    for (const line of lines) {
+      const id = lineId(line.area, line.topic, line.key);
+      const index = next.findIndex((stored) => stored.id === id);
+      const stored = next[index];
+      if (stored?.origin === 'correction') {
+        kept.push(id);
+        continue;
+      }
+      const fresh: StoredLine = { ...line, text: trimText(line.text), id, origin: 'file' };
+      if (stored === undefined) next.push(fresh);
+      else next[index] = fresh;
+      added += 1;
+    }
+    this.lines = next;
+    this.prune();
+    if (added > 0) await this.persist();
+    return { added, kept };
   }
 
   /** The owner's own words. A tombstone keeps later scans from bringing the line back. */

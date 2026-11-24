@@ -18,6 +18,9 @@ import { registerAppSelfRoutes } from './app-self.js';
 import { newToken } from './devices.js';
 import { isLoopbackHost, writeLocalToken } from './local-token.js';
 
+/** After the server's own 30 tries, the port is tried again this often until it is free. */
+const LISTEN_AGAIN_MS = 60_000;
+
 export interface MobileBridgeOptions {
   /** Tests and the CLI pair/rotate flow keep the socket closed. */
   listen?: boolean;
@@ -109,43 +112,62 @@ export function mobileBridge(options: MobileBridgeOptions = {}): Plugin {
         timeZone: ctx.assistant.timezone,
       };
       let server: BridgeServerHandle | undefined;
+      let retry: ReturnType<typeof ctx.clock.setTimeout> | undefined;
+      let stopped = false;
       return {
         async start() {
           if (options.listen === false) return;
-          const handle = await startBridgeServer(deps, {
-            host: config.host,
-            port: config.port,
-            clock: ctx.clock,
-            log: ctx.log,
-          });
-          if (handle === undefined) {
-            ctx.log.error('mobile: bridge server did not start; the rest of the app keeps running');
-            return;
-          }
-          server = handle;
-          if (options.localTokenFile !== undefined) {
-            if (isLoopbackHost(config.host)) {
-              const token = newToken();
-              auth.setLocalToken(token);
-              await writeLocalToken(options.localTokenFile, { baseUrl: `http://127.0.0.1:${handle.port}`, token, now: ctx.clock.now() })
-                .catch((error: unknown) => {
-                  auth.setLocalToken(undefined);
-                  ctx.log.warn('mobile: desktop token not written', { error: error instanceof Error ? error.name : 'error' });
-                });
-            } else {
-              ctx.log.info('mobile: bridge is not on loopback; the desktop app pairs instead of using a local token');
-            }
-          }
-          options.onListening?.(handle.port);
-          ctx.log.info('mobile: bridge listening', { port: handle.port });
+          stopped = false;
+          await listen();
         },
         async stop() {
+          stopped = true;
+          if (retry !== undefined) ctx.clock.clearTimeout(retry);
+          retry = undefined;
           if (server !== undefined) {
             await server.close();
             server = undefined;
           }
         },
       };
+
+      async function listen(): Promise<void> {
+        const handle = await startBridgeServer(deps, {
+          host: config.host,
+          port: config.port,
+          clock: ctx.clock,
+          log: ctx.log,
+        });
+        if (stopped) {
+          await handle?.close();
+          return;
+        }
+        if (handle === undefined) {
+          // the port is still held (an old copy shutting down, a second copy): keep trying, the phones need it
+          ctx.log.error('mobile: bridge server did not start; the rest of the app keeps running, trying again in a minute');
+          retry = ctx.clock.setTimeout(() => {
+            retry = undefined;
+            void listen();
+          }, LISTEN_AGAIN_MS);
+          return;
+        }
+        server = handle;
+        if (options.localTokenFile !== undefined) {
+          if (isLoopbackHost(config.host)) {
+            const token = newToken();
+            auth.setLocalToken(token);
+            await writeLocalToken(options.localTokenFile, { baseUrl: `http://127.0.0.1:${handle.port}`, token, now: ctx.clock.now() })
+              .catch((error: unknown) => {
+                auth.setLocalToken(undefined);
+                ctx.log.warn('mobile: desktop token not written', { error: error instanceof Error ? error.name : 'error' });
+              });
+          } else {
+            ctx.log.info('mobile: bridge is not on loopback; the desktop app pairs instead of using a local token');
+          }
+        }
+        options.onListening?.(handle.port);
+        ctx.log.info('mobile: bridge listening', { port: handle.port });
+      }
     },
   };
 }
