@@ -36,10 +36,24 @@ export async function tailnetMacs(exec: Exec): Promise<TailnetMac[]> {
 }
 
 /** The app to hand out: the zip kept here, or one made from this Mac's own installed app. */
+/** The public desktop app (built once, unsigned) for a Mac that has neither its own build nor the app. */
+export const DESKTOP_RELEASE = 'https://github.com/myungkeun02/axkit-desktop/releases/latest/download';
+
+async function downloadDesktopZip(home: string, exec: Exec, zip: string): Promise<string | undefined> {
+  await exec('mkdir', ['-p', join(home, 'dist')]);
+  const part = `${zip}.part`;
+  const got = await exec('curl', ['-fsSL', '--max-time', '600', '-o', part, `${DESKTOP_RELEASE}/ax-kit-desktop.zip`]).catch(() => undefined);
+  if (got?.code !== 0) return undefined;
+  // the build info lets paired Mac apps offer this version as an update; without it the zip still installs
+  await exec('curl', ['-fsSL', '--max-time', '60', '-o', zip.replace(/\.zip$/, '.json'), `${DESKTOP_RELEASE}/ax-kit-desktop.json`]).catch(() => undefined);
+  const moved = await exec('mv', ['-f', part, zip]).catch(() => undefined);
+  return moved?.code === 0 ? zip : undefined;
+}
+
 export async function ensureDesktopZip(home: string, exec: Exec, exists: (path: string) => Promise<boolean>, app = '/Applications/ax-kit.app'): Promise<string | undefined> {
   const zip = desktopZipPath(home);
   if (await exists(zip)) return zip;
-  if (!(await exists(app))) return undefined;
+  if (!(await exists(app))) return await downloadDesktopZip(home, exec, zip);
   await exec('mkdir', ['-p', join(home, 'dist')]);
   const made = await exec('ditto', ['-c', '-k', '--keepParent', app, zip]).catch(() => undefined);
   return made?.code === 0 ? zip : undefined;
@@ -61,7 +75,7 @@ export async function installOnMac(deps: InstallMacDeps, config: Config, publicU
   const { phone } = deps;
   const zip = await ensureDesktopZip(phone.home, deps.exec, deps.exists);
   if (zip === undefined) {
-    phone.say(`나눠 줄 데스크톱 앱이 이 맥에 없어요. 앱이 있는 맥에서 만든 ${desktopZipPath('~/.ax-kit')} 파일을 이 맥에 넣어 주세요.`);
+    phone.say(`나눠 줄 데스크톱 앱이 이 맥에 없고, 공개된 앱도 받지 못했어요. 인터넷 연결을 확인하고 다시 해 주세요 (또는 ${desktopZipPath('~/.ax-kit')} 파일을 이 맥에 넣어 주세요).`);
     return 1;
   }
   const macs = await tailnetMacs(deps.exec);

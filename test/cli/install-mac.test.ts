@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { MobileAdmin } from '../../src/mobile/admin.js';
 import { ApkLinks } from '../../src/mobile/apk-links.js';
 import { InstallLinks, installCommand, installScript } from '../../src/mobile/install-links.js';
-import { installOnMac, tailnetMacs } from '../../src/cli/install-mac.js';
+import { ensureDesktopZip, installOnMac, tailnetMacs } from '../../src/cli/install-mac.js';
 import type { PhoneCliDeps } from '../../src/cli/phone.js';
 import type { Exec } from '../../src/cli/tailscale.js';
 import { createScriptedPrompter } from '../../src/cli/prompter.js';
@@ -58,5 +58,14 @@ describe('desktop app on another Mac of the tailnet', () => {
     await expect(links.create({ zip: '/z', base: 'http://m.ts.net', pair: 'axkit://pair?n=a' })).rejects.toThrow('Unsafe');
     await clock.advance(11 * 60_000);
     expect(await links.find(link.nonce)).toBeUndefined();
+  });
+
+  it('downloads the public desktop app when this Mac has neither a zip nor the app', async () => {
+    const ran: string[] = [];
+    const exec: Exec = async (cmd, args) => (ran.push(`${cmd} ${args.at(-1) ?? ''}`), { code: 0, stdout: '', stderr: '' });
+    expect(await ensureDesktopZip('/h/.ax-kit', exec, async () => false)).toBe('/h/.ax-kit/dist/ax-kit-desktop.zip');
+    expect(ran.some((line) => line.includes('axkit-desktop/releases/latest/download/ax-kit-desktop.zip'))).toBe(true);
+    const failing: Exec = async (cmd) => ({ code: cmd === 'curl' ? 22 : 0, stdout: '', stderr: '' });
+    expect(await ensureDesktopZip('/h/.ax-kit', failing, async () => false)).toBeUndefined();
   });
 });

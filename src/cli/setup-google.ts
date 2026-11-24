@@ -60,8 +60,8 @@ export function driveFolderIds(text: string): string[] {
 
 const CHECKLIST = [
   'a) 새 프로젝트: https://console.cloud.google.com/projectcreate',
-  'b) API 사용 설정 (Gmail API, Google Calendar API): https://console.cloud.google.com/apis/library',
-  'c) OAuth 동의 화면 (https://console.cloud.google.com/auth/overview): 외부(External), 앱 이름·내 이메일, 대상에 내 계정을 테스트 사용자로 추가',
+  'b) API 사용 설정 (https://console.cloud.google.com/apis/library에서 하나씩 검색해 "사용"): Gmail API, Google Calendar API, Google Drive API, Google Docs API, Google Sheets API, Google Tasks API, People API',
+  'c) OAuth 동의 화면 (https://console.cloud.google.com/auth/overview): 위쪽에서 a의 프로젝트가 골라졌는지 확인 → "시작하기" → 앱 이름·지원 이메일 → 대상 "외부"(회사 Google Workspace 계정이면 "내부") → 연락처 이메일 → 정책 동의 → 만들기',
   'd) 중요: 게시 상태를 "프로덕션으로 게시"로 바꾸세요 — "테스트" 상태면 연결이 7일마다 끊겨요. 게시 후 로그인할 때 "확인되지 않은 앱" 경고가 나오면 "고급 > (앱 이름)(으)로 이동"을 눌러 계속하면 돼요 (내가 만든 내 앱이라 괜찮아요).',
   'e) 클라이언트 만들기 (https://console.cloud.google.com/auth/clients): 유형 "데스크톱 앱" -> JSON 다운로드',
 ];

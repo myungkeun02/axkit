@@ -4,7 +4,8 @@ import { toString as qrToString } from 'qrcode';
 import type { Config } from '../core/index.js';
 import { KeychainSecretStore, configPath, loadConfig } from '../core/index.js';
 import { nodeProcessRunner } from '../core/process/node-runner.js';
-import { androidPaths, buildReleaseApk, fileExists } from '../app/android.js';
+import { NO_JAVA, androidPaths, buildReleaseApk, fileExists } from '../app/android.js';
+import { downloadReleaseApk } from '../app/android-release.js';
 import { openPhoneAdmin, preparePhoneFiles } from '../app/phone.js';
 import { funnelCommand } from './funnel.js';
 import { pushTestCommand } from './phone-push.js';
@@ -129,6 +130,13 @@ function apkBuilder(home: string): ApkBuilder {
       const path = androidPaths(home).apk;
       return (await fileExists(path)) ? path : undefined;
     },
-    build: () => buildReleaseApk(deps),
+    // a Mac without Java or the app code gets the public signed build instead
+    build: async () =>
+      await buildReleaseApk(deps).catch(async (error: unknown) => {
+        const message = error instanceof Error ? error.message : String(error);
+        if (message !== NO_JAVA && !message.includes('앱 코드가 없어서')) throw error;
+        console.log(`${message} 대신 공개된 앱을 받을게요…`);
+        return await downloadReleaseApk(androidPaths(home).apk);
+      }),
   };
 }

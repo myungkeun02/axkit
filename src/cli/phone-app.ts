@@ -89,7 +89,7 @@ export async function apkCommand(deps: PhoneAppDeps, publicUrl: string | undefin
     }
   }
   deps.say('설치 순서:');
-  deps.say('1) 휴대폰 카메라로 QR을 찍어 APK를 내려받아요.');
+  deps.say(publicUrl === undefined ? '1) 위 APK 파일을 휴대폰으로 옮겨요 (USB, 메일, 메신저 등).' : '1) 휴대폰 카메라로 QR을 찍어 APK를 내려받아요.');
   deps.say('2) 파일을 열면 "알 수 없는 앱 설치" 허용을 물어요 → 허용.');
   deps.say('3) 설치 → 열기.');
   deps.say('4) 이 Mac에서 `ax-kit phone pair --app` → 앱에서 "QR로 연결".');

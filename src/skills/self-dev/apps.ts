@@ -3,6 +3,7 @@ import { homedir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import type { ProcessRunner } from '../../core/process/types.js';
+import { findAndroidSdk, findJavaHome } from '../../core/process/toolchains.js';
 import { updatePaths, writeBuildInfo } from '../app-updates/plugin.js';
 import type { Checks, GitEnv } from './git-ops.js';
 import { closeWorktree, commitAll, git, headOf, openWorktree, tail } from './git-ops.js';
@@ -51,8 +52,8 @@ export async function detectApps(run: ProcessRunner, home = homedir(), axHome = 
   }
   const android = join(root, 'ax-kit-android');
   if (await exists(join(android, '.git'))) {
-    const java = '/opt/homebrew/opt/openjdk@17';
-    const sdk = '/opt/homebrew/share/android-commandlinetools';
+    const java = findJavaHome() ?? '/opt/homebrew/opt/openjdk@17';
+    const sdk = findAndroidSdk() ?? '/opt/homebrew/share/android-commandlinetools';
     const ready = (await exists(join(java, 'bin', 'java'))) && (await exists(join(sdk, 'platforms')));
     apps.push({
       name: 'android',

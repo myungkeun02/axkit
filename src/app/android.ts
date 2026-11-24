@@ -14,9 +14,10 @@ const BUILD_TIMEOUT_MS = 30 * 60_000;
 const KEYTOOL_TIMEOUT_MS = 60_000;
 
 /** The Android app: its own repository next to ax-kit (~/ax-kit-apps/ax-kit-android), else an android/ folder here. */
-export const ANDROID_DIR = existsSync(join(homedir(), 'ax-kit-apps', 'ax-kit-android', 'gradlew'))
-  ? join(homedir(), 'ax-kit-apps', 'ax-kit-android')
-  : fileURLToPath(new URL('../../android', import.meta.url));
+/** The Android app code: ~/ax-kit-apps (what setup clones), next to this checkout, or inside it. */
+export const ANDROID_DIR =
+  [join(homedir(), 'ax-kit-apps', 'ax-kit-android'), fileURLToPath(new URL('../../../ax-kit-android', import.meta.url))].find((dir) => existsSync(join(dir, 'gradlew'))) ??
+  fileURLToPath(new URL('../../android', import.meta.url));
 
 /** What `phone apk` built last, next to the APK: the apps compare it with their own version to offer an update. */
 export interface ApkInfo {
@@ -59,6 +60,12 @@ export async function fileExists(path: string): Promise<boolean> {
   }
 }
 
+export { findAndroidSdk, findJavaHome } from '../core/process/toolchains.js';
+import { findAndroidSdk, findJavaHome } from '../core/process/toolchains.js';
+
+/** Plain words for "this Mac cannot build the Android app". */
+export const NO_JAVA = '이 맥에 Java가 없어서 안드로이드 앱을 만들 수 없어요.';
+
 export interface AndroidDeps {
   home: string;
   secrets: SecretStore;
@@ -82,8 +89,10 @@ export async function ensureSigningKey(deps: AndroidDeps): Promise<'created' | '
   const password = randomBytes(24).toString('base64url');
   await mkdir(join(deps.home, 'android'), { recursive: true, mode: 0o700 });
   await chmod(join(deps.home, 'android'), 0o700);
+  const java = findJavaHome();
+  if (java === undefined) throw new Error(NO_JAVA);
   const result = await deps.run(
-    'keytool',
+    join(java, 'bin', 'keytool'),
     [
       '-genkeypair', '-keystore', paths.keystore, '-storetype', 'PKCS12', '-alias', KEY_ALIAS,
       '-keyalg', 'RSA', '-keysize', '3072', '-validity', '10000', '-dname', 'CN=ax-kit',
@@ -108,8 +117,10 @@ export async function buildReleaseApk(deps: AndroidDeps): Promise<string> {
   const counted = await deps.run('git', ['-C', androidDir, 'rev-list', '--count', 'HEAD'], { timeoutMs: 10_000 }).catch(() => undefined);
   const versionCode = Math.max(1, Number.parseInt(counted?.stdout.trim() ?? '', 10) || 1);
   const versionName = `1.0.${versionCode}`;
-  const java = ['/opt/homebrew/opt/openjdk@17', '/usr/local/opt/openjdk@17'].find((dir) => existsSync(join(dir, 'bin', 'java')));
-  const sdk = ['/opt/homebrew/share/android-commandlinetools', '/usr/local/share/android-commandlinetools'].find((dir) => existsSync(join(dir, 'platforms')));
+  const java = findJavaHome();
+  const sdk = findAndroidSdk();
+  if (java === undefined) throw new Error(NO_JAVA);
+  if (!existsSync(join(androidDir, 'gradlew'))) throw new Error('이 맥에 안드로이드 앱 코드가 없어서 새로 만들 수 없어요.');
   const gradle = ['./gradlew', '--no-daemon', '-q', 'assembleRelease'];
   const [cmd, ...args] = deps.buildLock !== undefined && deps.buildLock !== '' ? ['lockf', '-k', deps.buildLock, ...gradle] : gradle;
   const result = await deps.run(cmd ?? './gradlew', args, {
@@ -120,7 +131,8 @@ export async function buildReleaseApk(deps: AndroidDeps): Promise<string> {
       AXKIT_KEY_ALIAS: KEY_ALIAS,
       AXKIT_VERSION_CODE: String(versionCode),
       AXKIT_VERSION_NAME: versionName,
-      ...(java !== undefined ? { JAVA_HOME: java, PATH: `${java}/bin:${process.env['PATH'] ?? '/usr/bin:/bin'}` } : {}),
+      JAVA_HOME: java,
+      PATH: `${java}/bin:${process.env['PATH'] ?? '/usr/bin:/bin'}`,
       ...(sdk !== undefined ? { ANDROID_HOME: sdk } : {}),
     },
     timeoutMs: BUILD_TIMEOUT_MS,
