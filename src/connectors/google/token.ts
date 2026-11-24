@@ -19,6 +19,8 @@ export interface GoogleTokenDeps {
   secrets: SecretReader;
   clock: Clock;
   fetch: typeof fetch;
+  /** Which account's refresh token (another connected account keeps its own); default the first one. */
+  refreshSecret?: string;
 }
 
 /** Exchanges the stored refresh token for cached access tokens. */
@@ -32,7 +34,7 @@ export class GoogleTokenSource {
     if (this.cached !== undefined && now < this.cached.expiresAt) return this.cached.token;
 
     const client = await this.readClient();
-    const refreshToken = await this.deps.secrets.get(REFRESH_TOKEN_SECRET);
+    const refreshToken = await this.deps.secrets.get(this.deps.refreshSecret ?? REFRESH_TOKEN_SECRET);
     if (refreshToken === undefined || refreshToken === '') {
       throw new GoogleAuthError('Google is not connected. Run `ax-kit connect google` to connect.');
     }

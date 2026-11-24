@@ -289,7 +289,7 @@ describe('googleDriveConnector', () => {
       id: 'connector.google-drive',
       kind: 'connector',
       title: 'Google Drive',
-      secrets: ['google.oauth-client', 'google.refresh-token'],
+      secrets: expect.arrayContaining(['google.oauth-client', 'google.refresh-token', 'google.accounts']),
     });
     const listed = await ctx.use(Contracts.filesDrive).list({ limit: 10 });
     expect(listed.map((entry) => entry.name)).toContain('notes');

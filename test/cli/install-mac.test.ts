@@ -41,7 +41,7 @@ describe('desktop app on another Mac of the tailnet', () => {
   it('falls back to the one line to paste when SSH is not allowed there', async () => {
     const { deps, said } = setup(255);
     await installOnMac(deps, {} as never, 'https://office-mini.tail1.ts.net');
-    expect(said.join('\n')).toContain('SSH 허용');
+    expect(said.join('\n')).toContain('원격으로 들어가지 못했어요');
     expect(said.at(-1)).toMatch(/curl -fsSL https:\/\/office-mini.tail1.ts.net\/m\/install\//);
   });
 

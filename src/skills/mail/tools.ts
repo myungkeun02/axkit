@@ -62,6 +62,8 @@ export interface MailSummaryOutput {
   important: boolean;
   /** Gmail's own tab (promotions, social, updates, forums), when it sorted the mail into one. */
   category?: string;
+  /** The owner's account it is in (its address), when more than one is connected. */
+  account?: string;
 }
 
 const CATEGORIES = ['promotions', 'social', 'updates', 'forums'] as const;
@@ -75,6 +77,7 @@ function summaryOut(summary: MailSummary): MailSummaryOutput {
   const category = categoryOf(summary);
   return {
     ...(category !== undefined ? { category } : {}),
+    ...(summary.account !== undefined ? { account: summary.account } : {}),
     id: summary.id,
     threadId: summary.threadId,
     from: summary.from,

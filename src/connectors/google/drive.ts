@@ -39,6 +39,8 @@ export interface GoogleDriveFilesOptions {
   rules: FileRules;
   folderIds: readonly string[];
   log: Logger;
+  /** The file index tells sources apart by this; another account's Drive gets its own ("drive:a2"). */
+  label?: string;
 }
 
 function toItem(raw: unknown): DriveItem | undefined {
@@ -64,9 +66,11 @@ function truncateBytes(text: string, maxBytes: number): string {
 
 /** Google Drive adapter over folders the owner configured. Read-only. */
 export class GoogleDriveFiles implements FileSource {
-  readonly label = 'drive';
+  readonly label: string;
 
-  constructor(private readonly deps: GoogleDriveFilesOptions) {}
+  constructor(private readonly deps: GoogleDriveFilesOptions) {
+    this.label = deps.label ?? 'drive';
+  }
 
   async list(opts: { modifiedAfter?: Date; limit: number; oldestFirst?: boolean }): Promise<FileEntry[]> {
     if (opts.limit <= 0) return [];

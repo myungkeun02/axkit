@@ -29,7 +29,7 @@ describe('runLoopbackConsent', () => {
       const auth = new URL(authUrl);
       expect(auth.origin + auth.pathname).toBe('https://accounts.google.com/o/oauth2/v2/auth');
       expect(auth.searchParams.get('access_type')).toBe('offline');
-      expect(auth.searchParams.get('prompt')).toBe('consent');
+      expect(auth.searchParams.get('prompt')).toBe('consent select_account');
       expect(auth.searchParams.get('code_challenge_method')).toBe('S256');
 
       const redirectUri = auth.searchParams.get('redirect_uri') ?? '';

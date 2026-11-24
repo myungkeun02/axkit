@@ -85,7 +85,8 @@ export function buildAuthUrl(opts: AuthUrlOptions): string {
   url.searchParams.set('response_type', 'code');
   url.searchParams.set('scope', opts.scopes.join(' '));
   url.searchParams.set('access_type', 'offline');
-  url.searchParams.set('prompt', 'consent');
+  // the account chooser too, so a second account can be picked while the first is signed in
+  url.searchParams.set('prompt', 'consent select_account');
   url.searchParams.set('state', opts.state);
   url.searchParams.set('code_challenge', opts.challenge);
   url.searchParams.set('code_challenge_method', 'S256');

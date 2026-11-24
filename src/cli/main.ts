@@ -4,7 +4,8 @@ import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { parseArgs } from 'node:util';
 import { KeychainSecretStore, defaultHome } from '../core/index.js';
-import { connectGoogleCommand, pairCommand } from './commands.js';
+import { connectGoogleCommand, openInBrowser, pairCommand } from './commands.js';
+import { googleAccountsCommand } from './google-accounts.js';
 import { doctorFailed, formatDoctor, runDoctor } from './doctor.js';
 import { phoneCommand } from './phone.js';
 import type { PhoneFlags } from './phone.js';
@@ -53,6 +54,7 @@ Usage:
   ax-kit service uninstall [--home <dir>]
   ax-kit service status [--home <dir>]
   ax-kit connect google [--home <dir>]
+  ax-kit connect google add | accounts | remove <주소>   구글 계정 더 연결하기 · 목록 · 빼기
   ax-kit pair [--home <dir>]
   ax-kit phone pair [--platform ios|android] [--name <device name>]
   ax-kit phone pair --app [--name <device name>]
@@ -236,6 +238,9 @@ export async function main(argv: readonly string[] = process.argv.slice(2)): Pro
       if (positionals[1] !== 'google') {
         printHelp();
         return 2;
+      }
+      if (positionals[2] === 'add' || positionals[2] === 'accounts' || positionals[2] === 'remove') {
+        return await googleAccountsCommand(positionals[2], positionals[3], home, openInBrowser);
       }
       return await connectGoogleCommand(home);
     case 'pair':

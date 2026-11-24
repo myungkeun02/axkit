@@ -10,6 +10,8 @@ export interface CalendarEvent {
   attendees?: readonly string[];
   /** Link the owner can open, when the service has one. */
   url?: string;
+  /** Which of the owner's accounts it is on (its address), when more than one is connected. */
+  account?: string;
 }
 
 export interface EventDraft {

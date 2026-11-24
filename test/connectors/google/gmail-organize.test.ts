@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { GmailOrganizer } from '../../../src/connectors/google/gmail-organize.js';
+import { MultiOrganizer } from '../../../src/connectors/google/multi-mail.js';
 import { gmailConnector } from '../../../src/connectors/google/plugin.js';
 import { Contracts, MailPermissionError } from '../../../src/core/contracts/index.js';
 import { createTestContext } from '../../support/context.js';
@@ -121,6 +122,6 @@ describe('gmailConnector organize', () => {
 
     const granted = createTestContext({ config: { organize: true } });
     await gmailConnector().setup(granted.ctx);
-    expect(granted.ctx.tryUse(Contracts.mailOrganize)).toBeInstanceOf(GmailOrganizer);
+    expect(granted.ctx.tryUse(Contracts.mailOrganize)).toBeInstanceOf(MultiOrganizer);
   });
 });

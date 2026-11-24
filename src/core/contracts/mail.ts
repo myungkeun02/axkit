@@ -10,6 +10,8 @@ export interface MailSummary {
   important: boolean;
   /** The service's own labels (Gmail "CATEGORY_PROMOTIONS", "SENT"), when it has them. */
   labels?: readonly string[];
+  /** Which of the owner's accounts it came from (its address), when more than one is connected. */
+  account?: string;
 }
 
 /** What the receiving server checked about the sender (Authentication-Results), lower-case results. */

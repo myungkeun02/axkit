@@ -871,3 +871,10 @@ Ctrl+C나, 5분 넘게 남았을 때 한 번 묻는 "백그라운드로 두고 �
 - 안드로이드: 같은 키로 서명돼 있어 기존 앱 위에 깔린다(데이터·연결 그대로). PackageInstaller로 설치, "출처를 알 수 없는 앱" 허용이 처음 한 번 필요.
 - 맥 앱: zip을 풀어 `/Applications/ax-kit.app`을 바꾸고 다시 연다(연결 그대로).
 - 빌드 번호: 앱 저장소의 커밋 수(`git rev-list --count HEAD`). 안드로이드는 `AXKIT_VERSION_CODE`/`AXKIT_VERSION_NAME`, 서명은 `AXKIT_KEYSTORE`/`AXKIT_KEYSTORE_PASSWORD`/`AXKIT_KEY_ALIAS` 환경 변수로 받는다(`ax-kit phone apk`가 넣어 줌).
+
+## 33. 구글 계정 여러 개 (2026-11-24)
+
+- 서버만 바뀜, 앱 화면 변경 없음. `ax-kit connect google add`로 계정을 더 연결(최대 5개), `accounts`로 목록, `remove <주소>`로 빼기.
+- 첫 계정은 기존 비밀값(`google.refresh-token`), 더한 계정은 `google.refresh-token.a2`…`a5`, 목록은 `google.accounts` `{primary, extra:[{key,email}]}`.
+- 메일·일정은 모든 계정에서 모아 최신순·시작순으로. 결과에 `account`(주소)가 붙음(계정이 둘 이상일 때만). 더한 계정의 id는 `a2~<원래 id>`라서 읽기·답장·보내기·보관이 그 메일이 있는 계정으로 감.
+- 새 메일·새 일정·문서·시트·할 일은 첫 계정으로. 더한 계정의 드라이브는 자기 파일만 별도 출처(`drive:a2`)로 색인.

@@ -109,7 +109,10 @@ export async function installOnMac(deps: InstallMacDeps, config: Config, publicU
       phone.say(`✓ ${target.name}에 설치했어요. 그 맥에서 앱이 열리고 비서와 연결돼요.`);
       return 0;
     }
-    phone.say(`${target.name}에 원격으로 들어가지 못했어요. 그 맥의 Tailscale에서 "SSH 허용"이 꺼져 있으면 이렇게 돼요.`);
+    // "No ED25519 host key is known…": the Mac's Tailscale does not take SSH (the App Store / standalone Mac app cannot)
+    phone.say('');
+    phone.say(`${target.name}에는 원격으로 들어가지 못했어요. 위에 영어 오류(예: "No ED25519 host key")가 보여도 괜찮아요 — 맥용 Tailscale 앱은 원격 접속(SSH)을 받지 못하는 경우가 많아서 그래요.`);
+    phone.say('대신 그 맥에서 아래 한 줄만 실행하면 똑같이 설치·연결돼요.');
   }
   phone.say(`${target?.name ?? '그 맥'}의 터미널(응용 프로그램 › 유틸리티 › 터미널)에 아래 한 줄을 붙여 넣고 엔터를 눌러 주세요. 앱을 받아 설치하고 연결까지 해요 (10분 안에, 한 번만):`);
   phone.say(`  ${command}`);

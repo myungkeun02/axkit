@@ -19,6 +19,8 @@ export interface ListedEvent {
   end: string;
   allDay: boolean;
   location?: string;
+  /** The owner's account it is on, when more than one is connected. */
+  account?: string;
   attendees?: readonly string[];
   /** Human-readable local range, e.g. "11월 20일 (금) 15:00–16:00". */
   local: string;
@@ -57,6 +59,7 @@ export function listEventsTool(deps: ListDeps): Tool<ListEventsInput, ListedEven
           end: event.end,
           allDay: event.allDay,
           ...(event.location !== undefined ? { location: event.location } : {}),
+          ...(event.account !== undefined ? { account: event.account } : {}),
           ...(event.attendees !== undefined ? { attendees: event.attendees } : {}),
           local: formatEventLocal(event, deps.timeZone, deps.texts),
         }));

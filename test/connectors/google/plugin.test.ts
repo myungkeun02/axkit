@@ -23,7 +23,7 @@ describe('googleCalendarConnector', () => {
       id: 'connector.google-calendar',
       kind: 'connector',
       title: 'Google Calendar',
-      secrets: ['google.oauth-client', 'google.refresh-token'],
+      secrets: expect.arrayContaining(['google.oauth-client', 'google.refresh-token', 'google.accounts']),
     });
 
     const reader = ctx.use(Contracts.calendarRead);
@@ -50,7 +50,7 @@ describe('gmailConnector', () => {
       id: 'connector.gmail',
       kind: 'connector',
       title: 'Gmail',
-      secrets: ['google.oauth-client', 'google.refresh-token'],
+      secrets: expect.arrayContaining(['google.oauth-client', 'google.refresh-token', 'google.accounts']),
     });
     expect(ctx.tryUse(Contracts.mailRead)).toBeDefined();
     expect(ctx.tryUse(Contracts.mailDraft)).toBeDefined();

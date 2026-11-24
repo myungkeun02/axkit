@@ -7,7 +7,8 @@ import { GoogleDriveFiles } from './drive.js';
 import { GoogleDriveWriter } from './drive-write.js';
 import { googleRequest, sleepUnlessAborted, withScopedSignal } from './http.js';
 import type { GoogleRequestFn } from './http.js';
-import { GoogleTokenSource, OAUTH_CLIENT_SECRET, REFRESH_TOKEN_SECRET } from './token.js';
+import { GoogleTokenSource } from './token.js';
+import { GOOGLE_SECRETS, readAccountList, refreshSecretFor } from './accounts.js';
 
 export interface GoogleDriveConnectorOptions {
   /** Tests inject a fake; production uses global fetch. */
@@ -21,7 +22,6 @@ interface DriveRequests {
   requestText: (url: string, init?: RequestInit) => Promise<string>;
 }
 
-const SECRETS = [OAUTH_CLIENT_SECRET, REFRESH_TOKEN_SECRET] as const;
 const MAX_ALLOWED_BYTES = 5_000_000;
 const RETRY_DELAY_MS = 1_000;
 
@@ -63,9 +63,9 @@ async function textRequest(
   }
 }
 
-function requestsFor(ctx: PluginContext, opts: GoogleDriveConnectorOptions): DriveRequests {
+function requestsFor(ctx: PluginContext, opts: GoogleDriveConnectorOptions, key = ''): DriveRequests {
   const fetchImpl = opts.fetch ?? fetch;
-  const tokens = new GoogleTokenSource({ secrets: ctx.secrets, clock: ctx.clock, fetch: fetchImpl });
+  const tokens = new GoogleTokenSource({ secrets: ctx.secrets, clock: ctx.clock, fetch: fetchImpl, refreshSecret: refreshSecretFor(key) });
   const sleep = opts.sleep ?? defaultSleep;
   return {
     request: <T>(url: string, init?: RequestInit): Promise<T> =>
@@ -93,7 +93,7 @@ export function googleDriveConnector(opts: GoogleDriveConnectorOptions = {}): Pl
       id: 'connector.google-drive',
       kind: 'connector',
       title: 'Google Drive',
-      secrets: [...SECRETS],
+      secrets: [...GOOGLE_SECRETS],
     },
     setup(ctx) {
       const { rules, folderIds } = rulesOf(ctx);
@@ -110,6 +110,17 @@ export function googleDriveConnector(opts: GoogleDriveConnectorOptions = {}): Pl
         }),
       );
       ctx.provide(Contracts.driveWrite, new GoogleDriveWriter(requests.request));
+      // another connected account's Drive: its own files (no folders are set for it), as a source of its own
+      ctx.bus.on('app.started', () => {
+        const registry = ctx.tryUse(Contracts.fileSources);
+        if (registry === undefined) return;
+        void readAccountList(ctx.secrets).then((list) => {
+          for (const account of list.extra) {
+            const own = requestsFor(ctx, opts, account.key);
+            registry.register(new GoogleDriveFiles({ request: own.request, requestText: own.requestText, rules, folderIds: [], log: ctx.log, label: `drive:${account.key}` }));
+          }
+        }, () => undefined);
+      });
     },
   };
 }
