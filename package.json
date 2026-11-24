@@ -1,0 +1,45 @@
+{
+  "name": "ax-kit",
+  "version": "0.0.0",
+  "private": true,
+  "description": "A personal AI assistant that runs on your own Mac and talks to you on Discord.",
+  "type": "module",
+  "engines": {
+    "node": ">=22.13"
+  },
+  "packageManager": "pnpm@10.30.1",
+  "bin": {
+    "ax-kit": "./bin/ax-kit.mjs"
+  },
+  "scripts": {
+    "ax-kit": "tsx src/cli/main.ts",
+    "start": "tsx src/cli/main.ts start",
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint .",
+    "test": "vitest run",
+    "check": "pnpm typecheck && pnpm lint && pnpm test"
+  },
+  "dependencies": {
+    "discord.js": "^14.21.0",
+    "qrcode": "1.5.4",
+    "tsx": "^4.20.0",
+    "zod": "^4.1.0"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.35.0",
+    "@types/node": "^22.18.0",
+    "@types/qrcode": "^1.5.6",
+    "eslint": "^9.35.0",
+    "typescript": "^5.9.0",
+    "typescript-eslint": "^8.44.0",
+    "vitest": "^3.2.0"
+  },
+  "pnpm": {
+    "onlyBuiltDependencies": [
+      "esbuild"
+    ]
+  },
+  "optionalDependencies": {
+    "playwright": "^1.65.1"
+  }
+}

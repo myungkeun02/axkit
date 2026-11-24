@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <key>CFBundleIdentifier</key>
+  <string>dev.ax-kit.reminders</string>
+  <key>CFBundleName</key>
+  <string>ax-kit reminders</string>
+  <key>NSRemindersUsageDescription</key>
+  <string>ax-kit keeps your to-dos in sync with Apple Reminders.</string>
+  <key>NSRemindersFullAccessUsageDescription</key>
+  <string>ax-kit keeps your to-dos in sync with Apple Reminders.</string>
+</dict>
+</plist>

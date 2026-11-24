@@ -1,0 +1,13 @@
+# gitleaks: default rules plus the obviously fake values used as test fixtures.
+[extend]
+useDefault = true
+
+[[allowlists]]
+description = "fake secrets in tests"
+paths = ['''^test/''']
+regexTarget = "match"
+regexes = [
+  '''AKIAABCDEFGHIJKLMNOP''',
+  '''abcdef0123456789abcdef0123456789''',
+  '''tok_test_1234567890''',
+]

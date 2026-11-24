@@ -1,0 +1,13 @@
+#!/bin/sh
+# Blocks commits that contain words from a private list kept outside the repo (personal names, products).
+# The list itself must never be committed, so it lives in AX_KIT_FORBIDDEN_FILE or ~/.config/ax-kit/forbidden.txt
+# (one extended regex per line).
+list="${AX_KIT_FORBIDDEN_FILE:-$HOME/.config/ax-kit/forbidden.txt}"
+[ -f "$list" ] || exit 0
+pattern=$(grep -v '^[[:space:]]*$' "$list" | paste -sd'|' -)
+[ -n "$pattern" ] || exit 0
+if git diff --cached -U0 --no-color | grep '^+' | grep -iEq "$pattern"; then
+  echo "pre-commit: staged changes contain a forbidden word (see $list)." >&2
+  git diff --cached -U0 --no-color | grep '^+' | grep -inE "$pattern" | head -5 >&2
+  exit 1
+fi

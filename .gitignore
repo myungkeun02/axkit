@@ -1,0 +1,29 @@
+node_modules
+dist/
+*.log
+.env
+.env.*
+# user data never lives in the repo (it is under ~/.axkit)
+*.db
+*.db-*
+client_secret*.json
+credentials*.json
+.DS_Store
+coverage/
+
+# signing material and per-machine settings: never in the repo
+Local.xcconfig
+**/Config/Local.xcconfig
+local-device.yml
+**/local-device.yml
+*.p8
+*.p12
+*.mobileprovision
+*.provisionprofile
+*.cer
+*.keystore
+*.jks
+keystore.properties
+local.properties
+.env*
+!.env.example
