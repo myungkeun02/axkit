@@ -28,11 +28,11 @@ export interface FilesChangesResult {
   watching: boolean;
 }
 
-function nameOf(path: string): string {
+export function nameOf(path: string): string {
   return path.split('/').filter((part) => part !== '').at(-1) ?? path;
 }
 
-function folderOf(path: string): string {
+export function folderOf(path: string): string {
   const parts = path.split('/');
   return parts.length > 1 ? parts.slice(0, -1).join('/') : path;
 }
@@ -67,7 +67,7 @@ interface DayKey {
   label: string;
 }
 
-function dayOf(iso: string, now: Date, timeZone: string): DayKey {
+export function dayOf(iso: string, now: Date, timeZone: string): DayKey {
   const wall = wallClock(new Date(iso), timeZone);
   const today = wallClock(now, timeZone);
   const key = `${wall.y}-${wall.m}-${wall.d}`;
@@ -78,7 +78,7 @@ function dayOf(iso: string, now: Date, timeZone: string): DayKey {
   return { key, label: `${wall.m}월 ${wall.d}일 (${weekday})` };
 }
 
-function clockTime(iso: string, timeZone: string): string {
+export function clockTime(iso: string, timeZone: string): string {
   const wall = wallClock(new Date(iso), timeZone);
   return `${String(wall.hh).padStart(2, '0')}:${String(wall.mm).padStart(2, '0')}`;
 }

@@ -3,6 +3,7 @@ import { Contracts } from '../../core/contracts/index.js';
 import type { Plugin } from '../../core/plugin/types.js';
 import { nodeProcessRunner } from '../../core/process/node-runner.js';
 import type { ProcessRunner } from '../../core/process/types.js';
+import { driveView } from './drive-view.js';
 import { fileChangesView, filesChangesTool } from './change-view.js';
 import { ChangeLog } from './changes.js';
 import { readFilesConfig } from './config.js';
@@ -59,6 +60,10 @@ export function filesSkill(options: FilesSkillOptions = {}): Plugin {
         const views = ctx.tryUse(Contracts.appViews);
         views?.register(fileChangesView({ changes, clock: ctx.clock, timeZone, watching }));
         views?.addFeature?.('file-changes');
+        if (ctx.tryUse(Contracts.filesDrive) !== undefined) {
+          views?.register(driveView({ sources: () => ctx.tryUse(Contracts.fileSources)?.list() ?? [], clock: ctx.clock, timeZone }));
+          views?.addFeature?.('drive');
+        }
       });
 
       return {

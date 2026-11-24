@@ -16,6 +16,8 @@ export interface FileEntry {
  */
 export interface FileSource {
   readonly label: string;
+  /** How the owner knows it ("Google Drive · me@example.com"), when the label alone is not enough. */
+  readonly title?: string;
   /** Newest first unless `oldestFirst` (the index job walks forward from its cursor that way). */
   list(opts: { modifiedAfter?: Date; limit: number; oldestFirst?: boolean }): Promise<FileEntry[]>;
   readText(id: string, maxBytes: number): Promise<string>;

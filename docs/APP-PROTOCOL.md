@@ -878,3 +878,9 @@ Ctrl+C나, 5분 넘게 남았을 때 한 번 묻는 "백그라운드로 두고 �
 - 첫 계정은 기존 비밀값(`google.refresh-token`), 더한 계정은 `google.refresh-token.a2`…`a5`, 목록은 `google.accounts` `{primary, extra:[{key,email}]}`.
 - 메일·일정은 모든 계정에서 모아 최신순·시작순으로. 결과에 `account`(주소)가 붙음(계정이 둘 이상일 때만). 더한 계정의 id는 `a2~<원래 id>`라서 읽기·답장·보내기·보관이 그 메일이 있는 계정으로 감.
 - 새 메일·새 일정·문서·시트·할 일은 첫 계정으로. 더한 계정의 드라이브는 자기 파일만 별도 출처(`drive:a2`)로 색인.
+
+## 34. 드라이브 화면 (`drive`, 2026-11-24)
+
+- 기능 `drive`(구글 드라이브가 연결돼 있을 때만). `capabilities.views[]`에 `{name:"drive", version:1, ui:"blocks", title:"드라이브", icon:"externaldrive"}`. 앱 변경 없이 §14 블록으로 그려짐.
+- `GET views/drive` → `{title:"드라이브", blocks}`: `stat` "최근 30일 동안 바뀐 내 파일", 날짜별 `list`(제목 `오늘 · 3건`), 줄마다 `{title: 파일 이름, detail: "폴더 · 계정", trailing: "14:05", message}`, 끝에 `note`와 `ask` 두 개. 계정이 둘 이상이면 `detail`에 계정 주소. 5분 캐시.
+- **새 필드 `rows[].message`**(선택, 모든 blocks 화면에 쓸 수 있음): 그 줄을 누르면 앱이 이 문장을 대화로 보낸다(`ask` 블록과 같은 동작). 없으면 누를 수 없는 줄. 모르는 앱은 무시해도 된다.

@@ -8,7 +8,7 @@ import { GoogleDriveWriter } from './drive-write.js';
 import { googleRequest, sleepUnlessAborted, withScopedSignal } from './http.js';
 import type { GoogleRequestFn } from './http.js';
 import { GoogleTokenSource } from './token.js';
-import { GOOGLE_SECRETS, readAccountList, refreshSecretFor } from './accounts.js';
+import { GOOGLE_SECRETS, accountLabel, readAccountList, refreshSecretFor } from './accounts.js';
 
 export interface GoogleDriveConnectorOptions {
   /** Tests inject a fake; production uses global fetch. */
@@ -117,7 +117,7 @@ export function googleDriveConnector(opts: GoogleDriveConnectorOptions = {}): Pl
         void readAccountList(ctx.secrets).then((list) => {
           for (const account of list.extra) {
             const own = requestsFor(ctx, opts, account.key);
-            registry.register(new GoogleDriveFiles({ request: own.request, requestText: own.requestText, rules, folderIds: [], log: ctx.log, label: `drive:${account.key}` }));
+            registry.register(new GoogleDriveFiles({ request: own.request, requestText: own.requestText, rules, folderIds: [], log: ctx.log, label: `drive:${account.key}`, title: `Google Drive · ${accountLabel(account)}` }));
           }
         }, () => undefined);
       });
