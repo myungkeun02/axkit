@@ -15,6 +15,7 @@ import type { ApkBuilder } from './phone-app.js';
 import { createTtyPrompter } from './prompter.js';
 import { findTailscale, tailscaleStatus } from './tailscale.js';
 import { installOnMac } from './install-mac.js';
+import { openQrPage } from './qr-page.js';
 import { runAttached } from './update.js';
 
 async function readExistingConfig(path: string): Promise<Config | undefined> {
@@ -78,7 +79,12 @@ export function phoneDeps(home: string): PhoneCliDeps {
     prepare: (input) =>
       preparePhoneFiles({ ...input, exec: execFileResult, writeFile: writeMode, mkdir: makeDir }),
     tailscale: () => tailscaleStatus(execFileResult),
-    qr: (text) => qrToString(text, { type: 'terminal', small: true }),
+    // also on a page in the browser, which is easier to scan than the terminal
+    qr: async (text) => {
+      const terminal = await qrToString(text, { type: 'terminal', small: true });
+      const opened = await openQrPage(text, async (file) => (await execFileResult('open', [file])).code === 0).catch(() => false);
+      return opened ? `${terminal}\n브라우저에도 QR을 크게 띄웠어요. 그 화면을 찍으면 돼요.` : terminal;
+    },
     loadConfig: () => readExistingConfig(configPath(home)),
     mkdir: makeDir,
     writeFile: writeMode,
