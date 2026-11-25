@@ -8,6 +8,7 @@ import { registerPrep } from './prep.js';
 import { registerReplies } from './replies.js';
 import { registerTravel } from './travel.js';
 import { registerMeetLinks } from './meet-reminder.js';
+import { registerTransit } from './transit-job.js';
 import { registerLunch } from './lunch.js';
 import { registerPlaces } from './places.js';
 import { registerVoice } from './voice.js';
@@ -30,6 +31,7 @@ export function daySkill(): Plugin {
       if (config.prep) registerPrep(ctx, config.prepAt, texts, config.situational);
       if (config.travel) registerTravel(ctx, config.travelBufferMinutes, texts);
       if (config.meetLinks) registerMeetLinks(ctx);
+      if (config.transit) registerTransit(ctx);
       if (config.places) {
         const known = registerPlaces(ctx);
         if (config.lunch) registerLunch(ctx, known);

@@ -35,7 +35,7 @@ describe('daySkill', () => {
 
   it('leaves switched-off features unregistered', async () => {
     const { scheduler, handlers } = await setup({
-      config: { prep: false, travel: false, meetLinks: false, places: false, close: false, replies: false, voice: false, health: false, nudges: { beforeEvent: false, midday: false } },
+      config: { prep: false, travel: false, meetLinks: false, transit: false, places: false, close: false, replies: false, voice: false, health: false, nudges: { beforeEvent: false, midday: false } },
     });
 
     expect(scheduler.jobs.size).toBe(0);

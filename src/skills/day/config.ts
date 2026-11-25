@@ -47,6 +47,8 @@ const configSchema = z.object({
   travel: z.boolean().default(true),
   /** A meeting with a video link (Meet, Zoom, Teams): its join link ten minutes before. */
   meetLinks: z.boolean().default(true),
+  /** Route cards through the browser agent (Naver/Kakao maps): rides, when to leave, and the next departures before leaving. */
+  transit: z.boolean().default(true),
   /** Weekdays at work with nothing over lunch: "점심 드셔야죠!" and places nearby. */
   lunch: z.boolean().default(true),
   /** Learns home and work from the phone's location (for lunch and the briefing's weather). */

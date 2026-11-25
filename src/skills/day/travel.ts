@@ -3,6 +3,7 @@ import { Contracts } from '../../core/contracts/index.js';
 import type { PluginContext } from '../../core/plugin/types.js';
 import { hhmmOf, startMsOf } from './day-range.js';
 import type { DayTexts } from './locale.js';
+import { transitHandles } from './transit-job.js';
 
 export const TRAVEL_JOB = 'day.travel';
 const CHECK_SECONDS = 300;
@@ -87,6 +88,8 @@ async function checkTravel(ctx: PluginContext, bufferMinutes: number, texts: Day
   }
   const event = nextEvent(events, now);
   if (event === undefined || event.location === undefined) return;
+  // the route card (browser agent, real timetables) already looks after it
+  if (await transitHandles(ctx, event)) return;
 
   let origin: GeoPoint | undefined;
   try {
