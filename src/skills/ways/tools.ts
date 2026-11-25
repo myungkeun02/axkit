@@ -9,6 +9,8 @@ import { guardText } from '../../core/text/data.js';
 import type { Tool } from '../../core/tools/types.js';
 import type { WaysStore } from './store.js';
 import { hostOf } from './store.js';
+import type { PendingCarts } from './pay.js';
+import { payTool } from './pay.js';
 
 /** Words that mean money changes hands: the card then says "결제" and the agent still stops before paying. */
 const BUYING = /주문|구매|결제|예매|예약|송금|이체|장바구니|구독|buy|order|purchase|pay|checkout|book|subscribe|transfer/i;
@@ -19,11 +21,16 @@ export interface WaysDeps {
   agent: () => WebAgent | undefined;
   clock: Clock;
   korean: boolean;
+  /** Carts stopped at the payment step, for web.pay. */
+  carts?: PendingCarts;
 }
 
 function explain(result: WebRunResult, korean: boolean): string | undefined {
   if (result.stopped === 'login') return korean ? '이 사이트에 로그인이 필요해요. Aside 브라우저에서 한 번 로그인해 두면 다음부터 할 수 있어요.' : 'This site needs a login in the Aside browser first.';
-  if (result.stopped === 'payment') return korean ? '결제 바로 전에서 멈췄어요. 장바구니와 금액을 확인하고 결제는 직접 해 주세요.' : 'Stopped right before paying; the owner pays.';
+  if (result.stopped === 'payment') {
+    if (result.cart !== undefined) return korean ? `결제 바로 전이에요: ${result.cart.items}, 합계 ${result.cart.total.toLocaleString('ko-KR')}원. 결제하려면 web.pay에 이 site와 total을 그대로 넘기세요(오너가 금액을 승인해요).` : `At the payment step: ${String(result.cart.total)} won. Call web.pay with this site and total; the owner approves it.`;
+    return korean ? '결제 바로 전에서 멈췄어요. 금액을 읽지 못해서 결제는 직접 해 주세요.' : 'Stopped right before paying; the total could not be read.';
+  }
   if (result.stopped === 'timeout') return korean ? '시간이 오래 걸려서 멈췄어요. 더 작게 나눠서 다시 해 볼게요.' : 'Timed out.';
   if (result.stopped === 'error') return korean ? '브라우저 작업이 실패했어요.' : 'The browser task failed.';
   return undefined;
@@ -51,8 +58,9 @@ async function runWeb(deps: WaysDeps, mode: 'look' | 'do', value: z.infer<typeof
   if (host !== undefined) await deps.store.touchSite(host, now);
   // what worked once is the starting point next time
   if (result.ok) await deps.store.recordProcedure({ goal: value.task, ...(host !== undefined ? { site: host } : {}), how: result.answer.slice(0, 400) }, now);
+  if (result.stopped === 'payment' && result.cart !== undefined && host !== undefined) deps.carts?.keep(host, value.task, result.cart, now.getTime());
   const note = explain(result, deps.korean);
-  return { ok: result.ok, answer: guardText('web_answer', result.answer), ...(note !== undefined ? { note } : {}), ...(host !== undefined ? { site: host } : {}) };
+  return { ok: result.ok, answer: guardText('web_answer', result.answer), ...(note !== undefined ? { note } : {}), ...(host !== undefined ? { site: host } : {}), ...(result.cart !== undefined ? { cart: result.cart } : {}) };
 }
 
 export function wayTools(deps: WaysDeps): Tool[] {
@@ -67,7 +75,7 @@ export function wayTools(deps: WaysDeps): Tool[] {
   };
   const act: Tool<z.infer<typeof doInput>, Record<string, unknown>> = {
     name: 'web.do',
-    description: 'Do one action on a website in the owner\'s own browser (fill and submit a form, change a setting in a company tool, put items in a cart). The owner approves the exact task first; it never pays.',
+    description: 'Do one action on a website in the owner\'s own browser (sign in with the saved login, fill and submit a form, change a setting, put items in a cart and go to checkout). The owner approves the exact task first. It stops at the final payment step with the cart and total; paying is web.pay.',
     input: doInput,
     effects: ['write'],
     effectsFor: (value): readonly Effect[] => [...(SENDING.test(value.task) ? (['send'] as const) : []), ...(BUYING.test(value.task) ? (['pay'] as const) : []), 'send'],
@@ -95,5 +103,5 @@ export function wayTools(deps: WaysDeps): Tool[] {
     describe: (value) => `사이트 잊기: ${value.site}`,
     run: async (value) => ({ forgot: await deps.store.forgetSite(hostOf(value.site) ?? value.site.toLowerCase()) }),
   };
-  return [look, act, remember, forget] as Tool[];
+  return [look, act, remember, forget, ...(deps.carts !== undefined ? [payTool(deps, deps.carts)] : [])] as Tool[];
 }

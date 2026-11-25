@@ -9,6 +9,8 @@ import { KmaWeather } from './kma.js';
 import { koLifeTexts } from './locale.js';
 import { NaverPriceSearch } from './naver-shop.js';
 import { KO_SECRET_NAMES } from './secrets.js';
+import { AsideParcel, AsidePlaces, AsidePrices, keyOrWeb } from './aside.js';
+import type { ParcelTracker, PlaceSource, PriceSearch } from '../../core/contracts/index.js';
 import { SeoulTransit } from './seoul-transit.js';
 import { SweetTracker } from './sweettracker.js';
 import { isSeoulTransitCity, TagoBusArrivals } from './tago.js';
@@ -84,12 +86,14 @@ export function koLifeConnector(opts: KoLifeConnectorOptions = {}): Plugin {
           ? new CompositeTransit(seoul, new TagoBusArrivals(deps, city))
           : seoul;
 
-      ctx.provide(Contracts.places, places);
+      // no key for a service: the owner's browser agent (Aside) reads the same thing from the web
+      const agent = () => ctx.tryUse(Contracts.webAgent);
+      ctx.provide(Contracts.places, keyOrWeb<PlaceSource>(places, new AsidePlaces(agent, () => ctx.clock.now().getTime()), agent));
       ctx.provide(Contracts.routes, new KoRoutes(deps));
       ctx.provide(Contracts.weather, weather);
       ctx.provide(Contracts.transit, transit);
-      ctx.provide(Contracts.parcel, new SweetTracker(deps));
-      ctx.provide(Contracts.prices, new NaverPriceSearch(deps));
+      ctx.provide(Contracts.parcel, keyOrWeb<ParcelTracker>(new SweetTracker(deps), new AsideParcel(agent), agent));
+      ctx.provide(Contracts.prices, keyOrWeb<PriceSearch>(new NaverPriceSearch(deps), new AsidePrices(agent), agent));
     },
   };
 }

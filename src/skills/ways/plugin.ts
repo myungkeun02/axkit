@@ -3,6 +3,7 @@ import type { Plugin } from '../../core/plugin/types.js';
 import type { KnownSite, Procedure } from './store.js';
 import { WaysStore } from './store.js';
 import { wayTools } from './tools.js';
+import { PendingCarts } from './pay.js';
 
 /**
  * "어떻게든 방법을 찾아서" (owner request): when no tool fits a request, the assistant finds a way instead of saying
@@ -17,7 +18,7 @@ export function waysSection(korean: boolean, sites: readonly KnownSite[], proced
     ...(hasAgent
       ? [
           "2. web.look to find out anything on the web or on a site where the owner is signed in (it changes nothing).",
-          '3. web.do for an action on a site; the owner approves the exact task on a card, and it never pays.',
+          '3. web.do for an action on a site (sign-in with the saved login, forms, checkout); the owner approves the exact task on a card. It stops at the payment step; then web.pay with that site and total, and the owner approves the amount on its own card.',
         ]
       : ['2. No browser agent is connected; say which site you would use and ask the owner to install or sign in to Aside on the Mac.']),
     '4. If you still lack the site, an account or a detail, ask the owner one short question, then carry on.',
@@ -40,7 +41,7 @@ export function waysSkill(): Plugin {
     setup(ctx) {
       const korean = ctx.assistant.language !== 'en';
       const store = new WaysStore(ctx.kv);
-      for (const tool of wayTools({ store, agent: () => ctx.tryUse(Contracts.webAgent), clock: ctx.clock, korean })) ctx.registerTool(tool);
+      for (const tool of wayTools({ store, agent: () => ctx.tryUse(Contracts.webAgent), clock: ctx.clock, korean, carts: new PendingCarts() })) ctx.registerTool(tool);
       ctx.bus.on('app.started', async () => {
         ctx.tryUse(Contracts.assistantContext)?.addSection('ways', async (text) =>
           waysSection(korean, await store.sites(), await store.relevant(text), ctx.tryUse(Contracts.webAgent) !== undefined),

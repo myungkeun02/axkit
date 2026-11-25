@@ -93,13 +93,28 @@ describe('day.replies digest', () => {
     const notice = notifier.notices[0];
     expect(notice?.kind).toBe('day.replies');
     expect(notice?.dedupeKey).toBe('2026-11-17');
-    expect(notice?.text).toContain('답장이 밀렸어요 2건');
-    expect(notice?.text).toContain('민수 <minsu@example.com> — 견적서 회신 (2일 전)');
-    expect(notice?.text).toContain('(1일 전)');
+    expect(notice?.text).toContain('답을 기다리는 메일이 2통 있어요.');
+    expect(notice?.text).toContain('1) 민수님 — 견적서 회신 (2일 전)');
+    expect(notice?.text).toContain('2) 지은님 — 다음 주 일정 (1일 전)');
+    expect(notice?.text).toContain('초안을 써서 먼저 보여 드릴게요');
     expect(notice?.choices).toEqual([
-      { id: 'day.draft:m1', label: '초안: 견적서 회신' },
-      { id: 'day.draft:m2', label: '초안: 다음 주 일정' },
+      { id: 'day.draft:m1', label: '1번 민수님께 답장 쓰기' },
+      { id: 'day.draft:m2', label: '2번 지은님께 답장 쓰기' },
     ]);
+  });
+
+  it('leaves out robots, notices and invitations, and says what each person wants', async () => {
+    const awaiting = new FakeAwaiting([
+      summary(),
+      summary({ id: 'm2', from: 'Google Drive <drive-shares-dm-noreply@google.com>', subject: '문서가 공유됨' }),
+      summary({ id: 'm3', from: '지은 <jieun@example.com>', subject: '초대: 주간 회의' }),
+    ]);
+    const { notifier, scheduler, ctx } = await setup({ awaiting });
+    await ctx.bus.emit('mail.triaged', { id: 'm1', from: '민수 <minsu@example.com>', subject: '견적서 회신', summary: '민수님이 견적서 확인을 부탁했어요', kind: 'question', importance: 'normal' });
+    await ctx.bus.emit('mail.triaged', { id: 'm3', from: '지은 <jieun@example.com>', subject: '초대: 주간 회의', summary: '주간 회의 초대', kind: 'invitation', importance: 'normal' });
+    await scheduler.run('day.replies', NOW);
+    expect(notifier.notices[0]?.text).toContain('답을 기다리는 메일이 1통 있어요.');
+    expect(notifier.notices[0]?.text).toContain('1) 민수님 — 민수님이 견적서 확인을 부탁했어요');
   });
 
   it('truncates the button label but keeps the id whole', async () => {
@@ -107,10 +122,8 @@ describe('day.replies digest', () => {
     const { notifier, scheduler } = await setup({ awaiting: new FakeAwaiting([summary({ subject: long })]) });
 
     await scheduler.run('day.replies', NOW);
-    expect(notifier.notices[0]?.choices?.[0]).toEqual({
-      id: 'day.draft:m1',
-      label: `초안: ${long.slice(0, 20)}`,
-    });
+    expect(notifier.notices[0]?.choices?.[0]).toEqual({ id: 'day.draft:m1', label: '1번 민수님께 답장 쓰기' });
+    expect(notifier.notices[0]?.text).toContain(long);
   });
 
   it('skips a message whose draft id would exceed the button limit', async () => {
@@ -148,7 +161,7 @@ describe('day.replies draft handler', () => {
     const replies = (replier as FakeReplier).replies;
     expect(replies[0]?.message.text).toContain('네, 확인했습니다. 내일까지 보내 드릴게요.');
     expect(replies[0]?.message.text).toContain('아직 보내지 않았어요');
-    expect(replies[0]?.message.text).toContain('승인 절차');
+    expect(replies[0]?.message.text).toContain('결재 카드로 한 번 더');
   });
 
   it('passes on messages from anyone other than the owner', async () => {

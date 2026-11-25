@@ -30,6 +30,8 @@ export interface DayTexts {
   repliesTitle(count: number): string;
   replyLine(from: string, subject: string, days: number): string;
   draftChoice(subject: string): string;
+  draftChoiceFor(number: number, who: string): string;
+  readonly repliesAsk: string;
   readonly noSubject: string;
   readonly mailNotConnected: string;
   readonly draftFailed: string;
@@ -84,14 +86,16 @@ const KO: DayTexts = {
   noTomorrowEvent: '내일은 일정이 없어요.',
   stepsLine: (steps) => `오늘 걸음 ${steps.toLocaleString('ko-KR')}보`,
 
-  repliesTitle: (count) => `답장이 밀렸어요 ${count}건`,
-  replyLine: (from, subject, days) => `${from} — ${subject} (${days}일 전)`,
+  repliesTitle: (count) => `답을 기다리는 메일이 ${count}통 있어요.`,
+  replyLine: (from, what, days) => `${from}님 — ${what} (${days}일 전)`,
   draftChoice: (subject) => `초안: ${subject}`,
+  draftChoiceFor: (number, who) => `${number}번 ${who}님께 답장 쓰기`,
+  repliesAsk: '답장할 메일을 고르면 초안을 써서 먼저 보여 드릴게요. 보내기 전에는 꼭 다시 물어봐요. 답이 필요 없으면 그냥 두셔도 돼요.',
   noSubject: '(제목 없음)',
   mailNotConnected: '메일이 연결되지 않았어요. Gmail 연결이 필요해요.',
   draftFailed: '초안을 만들지 못했어요.',
-  draftReady: (body) => `초안이에요. 아직 보내지 않았어요.\n\n${body}`,
-  approvalNote: '보내려면 메일 승인 절차가 필요해요.',
+  draftReady: (body) => `이렇게 답장을 써 봤어요. 아직 보내지 않았어요.\n\n${body}`,
+  approvalNote: '이대로 보낼지, 고칠 부분이 있는지 말씀해 주세요. 보내기 전에 결재 카드로 한 번 더 물어볼게요.',
 
   voiceSummary: (todos, events) => `할 일 ${todos}개 추가, 일정 ${events}개 확인 요청`,
   voiceConfirmSummary: (title, when) => `${title} (${when})`,
@@ -137,9 +141,11 @@ const EN: DayTexts = {
   noTomorrowEvent: 'No events tomorrow.',
   stepsLine: (steps) => `Steps today: ${steps.toLocaleString('en-US')}`,
 
-  repliesTitle: (count) => `${count} message(s) awaiting your reply`,
-  replyLine: (from, subject, days) => `${from} — ${subject} (${days}d ago)`,
+  repliesTitle: (count) => `${count} mail(s) are waiting for your answer.`,
+  replyLine: (from, what, days) => `${from} — ${what} (${days}d ago)`,
   draftChoice: (subject) => `Draft: ${subject}`,
+  draftChoiceFor: (number, who) => `Reply to #${number} (${who})`,
+  repliesAsk: "Pick one and I'll write a draft to show you first; I always ask before sending. Leave the rest if no answer is needed.",
   noSubject: '(no subject)',
   mailNotConnected: 'Mail is not connected. Gmail needs to be connected.',
   draftFailed: 'Could not write a draft.',

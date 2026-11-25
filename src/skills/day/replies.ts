@@ -23,11 +23,49 @@ function daysAgo(summary: MailSummary, now: Date): number {
   return Math.max(1, daysBetween(summary.receivedAt, now));
 }
 
-function choiceFor(summary: MailSummary, texts: DayTexts): Choice | undefined {
+function choiceFor(summary: MailSummary, texts: DayTexts, number?: number, who?: string): Choice | undefined {
   const id = `${DRAFT_PREFIX}${summary.id}`;
   if (id.length > MAX_CHOICE_ID) return undefined;
+  if (number !== undefined && who !== undefined) return { id, label: texts.draftChoiceFor(number, who.slice(0, MAX_SUBJECT_CHARS)) };
   const subject = summary.subject === '' ? texts.noSubject : summary.subject.slice(0, MAX_SUBJECT_CHARS);
   return { id, label: texts.draftChoice(subject) };
+}
+
+/** What the mail triage said about a mail (kept a week), so the digest lists only mail a person waits on. */
+interface TriagedNote {
+  kind: string;
+  summary: string;
+  at: string;
+}
+const TRIAGED_KEY = 'replies.triaged';
+const TRIAGED_DAYS = 8;
+const TRIAGED_CAP = 300;
+/** Kinds where a person waits for the owner's own answer. */
+const WAITS = new Set(['question', 'document_request', 'scheduling', 'introduction']);
+const ROBOT = /^(no[-_.]?reply|do[-_.]?not[-_.]?reply|mailer-daemon|postmaster|notifications?|alerts?|newsletter|news|marketing|calendar-notification|drive-shares)/i;
+
+function addressOf(from: string): string {
+  return (/<([^>]+)>/.exec(from)?.[1] ?? from).trim().toLowerCase();
+}
+
+/** "Mina Kim <mina@example.com>" → "Mina Kim"; a bare address keeps the part before @. */
+function nameOf(from: string): string {
+  const name = from.replace(/<[^>]*>/, '').replace(/"/g, '').trim();
+  return name !== '' ? name : (addressOf(from).split('@')[0] ?? from);
+}
+
+function waitsOnOwner(summary: MailSummary, note: TriagedNote | undefined): boolean {
+  const local = addressOf(summary.from).split('@')[0] ?? '';
+  if (ROBOT.test(local) || local.includes('noreply')) return false;
+  return note === undefined || WAITS.has(note.kind);
+}
+
+async function rememberTriaged(ctx: PluginContext, event: { id: string; kind: string; summary: string }): Promise<void> {
+  const notes = (await ctx.kv.get<Record<string, TriagedNote>>(TRIAGED_KEY)) ?? {};
+  const now = ctx.clock.now().getTime();
+  notes[event.id] = { kind: event.kind, summary: event.summary.slice(0, 160), at: new Date(now).toISOString() };
+  const kept = Object.entries(notes).filter(([, note]) => now - Date.parse(note.at) < TRIAGED_DAYS * 86_400_000).slice(-TRIAGED_CAP);
+  await ctx.kv.set(TRIAGED_KEY, Object.fromEntries(kept));
 }
 
 async function sendDigest(ctx: PluginContext, texts: DayTexts, now: Date): Promise<void> {
@@ -45,6 +83,9 @@ async function sendDigest(ctx: PluginContext, texts: DayTexts, now: Date): Promi
     ctx.log.warn('day replies: awaiting mail could not be loaded', { error: messageOf(error) });
     return;
   }
+  // only mail a person is waiting on: no robots, no notices, invites or share alerts (the mail triage said what it is)
+  const triaged = (await ctx.kv.get<Record<string, TriagedNote>>(TRIAGED_KEY)) ?? {};
+  messages = messages.filter((summary) => waitsOnOwner(summary, triaged[summary.id]));
   if (messages.length === 0) return;
 
   const notifier = ctx.tryUse(Contracts.notifier);
@@ -55,12 +96,14 @@ async function sendDigest(ctx: PluginContext, texts: DayTexts, now: Date): Promi
 
   const lines = [texts.repliesTitle(messages.length)];
   const choices: Choice[] = [];
-  for (const summary of messages) {
+  messages.forEach((summary, index) => {
     const subject = summary.subject === '' ? texts.noSubject : summary.subject;
-    lines.push(`- ${texts.replyLine(summary.from, subject, daysAgo(summary, now))}`);
-    const choice = choiceFor(summary, texts);
+    const what = triaged[summary.id]?.summary;
+    lines.push(`${String(index + 1)}) ${texts.replyLine(nameOf(summary.from), what ?? subject, daysAgo(summary, now))}`);
+    const choice = choiceFor(summary, texts, index + 1, nameOf(summary.from));
     if (choice !== undefined) choices.push(choice);
-  }
+  });
+  lines.push(texts.repliesAsk);
 
   const day = todayDay(now, ctx.assistant.timezone);
   await notifier.notify({
@@ -177,4 +220,7 @@ export function registerReplies(ctx: PluginContext, at: string, texts: DayTexts)
     run: (now) => sendDigest(ctx, texts, now),
   });
   ctx.registerHandler(draftHandler(ctx, texts));
+  ctx.bus.on('mail.triaged', async (event) => {
+    await rememberTriaged(ctx, event).catch(() => undefined);
+  });
 }
