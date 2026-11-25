@@ -66,10 +66,10 @@ export class TeamPlanFlow {
       .ask({
         topic: `bots:team-plan:${plan.id}`,
         summary: korean ? '일 지도대로 이렇게 팀을 만들까요?' : 'Shall I set up these teams from your work map?',
-        note: `${planText(plan, korean)}\n${korean ? '앱의 "팀 구조"에서 이름·역할·루틴을 고친 뒤 만들 수도 있어요.' : 'You can edit names, roles and routines in the app first.'}`,
+        note: `${planText(plan, korean)}\n${korean ? '만든 뒤에도 봇 화면에서 팀 이름·사람·역할을 바로 바꿀 수 있어요.' : 'After building, rename teams and move people right on the bots screen.'}`,
         choices: [
           { id: 'build', label: korean ? '이대로 만들기' : 'Build it', tone: 'primary', means: 'approved' },
-          { id: 'fix-in-app', label: korean ? '앱에서 고칠게요' : 'I’ll edit it', means: 'later' },
+          { id: 'later', label: korean ? '나중에' : 'Later', means: 'later' },
           { id: 'no', label: korean ? '만들지 않기' : 'Don’t', means: 'denied' },
         ],
         effects: ['write'],

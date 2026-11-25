@@ -46,6 +46,17 @@ describe('bot teams, team rooms and lead meetings (R16, R17)', () => {
       expect(group?.bots.find((b) => b.id === 'app-review')).toMatchObject({ rank: 'reviewer', tier: 'S' });
       expect(group?.teams?.[1]?.members).toEqual(['sales-lead', 'sales-s1', 'sales-s2', 'sales-s3']);
 
+      // direct edits from the bot screen
+      expect((await api(h, token, 'views/bots/renameTeam', { teamId: 'team-sales', name: '영업', purpose: '고객 응대' })).status).toBe(200);
+      expect((await api(h, token, 'views/bots/editBot', { botId: 'sales-s1', name: '김영업', role: '견적을 맡아요' })).status).toBe(200);
+      expect((await api(h, token, 'views/bots/moveBot', { botId: 'sales-s2', teamId: 'team-app' })).status).toBe(200);
+      expect((await api(h, token, 'views/bots/moveBot', { botId: 'app-lead', teamId: 'team-sales' })).status).toBe(400);
+      const edited = (await (await api(h, token, 'views/bots')).json()) as { data: { groups: { id: string; teams?: { id: string; name: string; members: string[] }[]; bots: { id: string; name: string }[] }[] } };
+      const after = edited.data.groups.find((g) => g.id === 'hanbit-lab');
+      expect(after?.teams?.find((t) => t.id === 'team-sales')?.name).toBe('영업');
+      expect(after?.teams?.find((t) => t.id === 'team-app')?.members).toContain('sales-s2');
+      expect(after?.bots.find((b) => b.id === 'sales-s1')?.name).toBe('김영업');
+
       expect((await api(h, token, 'views/bots/setTiers', { teamId: 'team-app', tiers: { lead: 'S' } })).status).toBe(200);
       const tiers = (await (await api(h, token, 'views/modeltiers')).json()) as { data: { purposes: { id: string; tier: string; chosen: boolean }[] } };
       expect(tiers.data.purposes.find((p) => p.id === 'bot.app-lead')).toMatchObject({ tier: 'S', chosen: true });

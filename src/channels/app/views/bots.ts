@@ -5,6 +5,7 @@ import type { AppView } from '../../../core/contracts/device-api.js';
 import { ViewInputError, ownerInputError } from '../../../core/contracts/device-api.js';
 import type { LlmControl } from '../../../core/contracts/llm-control.js';
 import { buildTeam, membersOf, setTeamTiers, tierOfBot } from '../../../core/bots/teams.js';
+import { botEditActions } from './bots-edit.js';
 import type { Composer } from '../../../core/bots/composition.js';
 import { checkInstructions, defaultInstructions } from '../../../core/bots/instructions.js';
 import { composedFields } from '../../../core/bots/composition.js';
@@ -113,6 +114,7 @@ export function botsView(options: BotsViewOptions): AppView {
       };
     },
     actions: {
+      ...botEditActions(directory, korean, ownerInputError),
       async createTeam(body) {
         const parsed = createSchema.safeParse(body);
         if (!parsed.success) throw new ViewInputError('createTeam needs {group or newGroupLabel, name, kind}');

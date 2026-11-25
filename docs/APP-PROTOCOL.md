@@ -906,3 +906,12 @@ Ctrl+C나, 5분 넘게 남았을 때 한 번 묻는 "백그라운드로 두고 �
   - `events[].calendar?`(캘린더 이름, 둘 이상일 때)·`events[].account?`(구글 계정이 둘 이상일 때). `views/today` 일정에도 `calendar?`.
   - 응답 맨 위 `calendars?: [{id, name, primary, writable, description?, account?}]` — 범례(캘린더마다 색)와 추가할 때 고르는 목록. `writable:false`(공휴일 등)는 고르는 목록에서 뺄 것. `calendarsLimited?: true`면 "기본 캘린더만 보여요 — 비서 맥에서 `ax-kit connect google`" 안내.
   - `add`에 `calendar?`(`calendars[].id` 권장, 이름도 됨). 없으면 기본 캘린더. 응답 `{id, calendar?}`(들어간 캘린더 이름).
+
+## 37. 봇 화면에서 바로 고치기 (2026-11-25)
+
+- `views/bots` 새 액션(바로 반영, 결재 카드 없음 — 되돌릴 수 있는 오너의 선택):
+  - `POST views/bots/renameTeam {teamId, name, purpose?}` → `{teamId, name}`
+  - `POST views/bots/editBot {botId, name?, role?}` → `{botId, name, role}`
+  - `POST views/bots/moveBot {botId, teamId}` → `{botId, teamId}`. 팀장은 다른 팀으로 옮길 수 없음(400, 오너에게 보일 문장).
+- 팀 구조 제안 카드의 버튼이 "이대로 만들기 / 나중에 / 만들지 않기"로 바뀜("앱에서 고칠게요" 없음). 만든 뒤 고치는 곳은 봇 화면.
+  `views/team-plan`은 그대로 있음(옛 앱용). 앱은 plan이 없거나 `status`가 `applied`·`declined`면 "팀 구조" 메뉴를 숨기면 됨.

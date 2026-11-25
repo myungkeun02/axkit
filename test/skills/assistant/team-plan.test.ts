@@ -74,7 +74,7 @@ describe('team plan from the work map', () => {
     await settle();
     expect(asked[0]?.summary).toBe('일 지도대로 이렇게 팀을 만들까요?');
     // "edit" is the app card's own reserved answer (it closes the card as denied): never a choice id here
-    expect(asked[0]?.choices.map((choice) => choice.id)).toEqual(['build', 'fix-in-app', 'no']);
+    expect(asked[0]?.choices.map((choice) => choice.id)).toEqual(['build', 'later', 'no']);
     expect(asked[0]?.note).toContain('■ 스튜디오 오름\n  · 브랜드A 리뉴얼 — 레퍼런스 조사, 피드백 정리\n      ↻ 매주 월 09:30 시안 진행 점검\n  · 전시 포스터 — 일정 관리');
     const teams = await directory.teams();
     expect(teams.map((team) => team.name)).toEqual(['브랜드A 리뉴얼', '전시 포스터']);
@@ -84,8 +84,8 @@ describe('team plan from the work map', () => {
     expect((await readPlan(context.kv))?.status).toBe('applied');
   });
 
-  it('waits on "앱에서 고칠게요", takes the app’s edits and builds what was edited', async () => {
-    const { context, flow, directory, routines, view } = setup({ status: 'answered', choice: 'fix-in-app', means: 'later', reused: false });
+  it('waits on "나중에", takes the app’s edits and builds what was edited', async () => {
+    const { context, flow, directory, routines, view } = setup({ status: 'answered', choice: 'later', means: 'later', reused: false });
     await flow.propose(SCAN);
     await settle();
     expect(await directory.teams()).toEqual([]);
