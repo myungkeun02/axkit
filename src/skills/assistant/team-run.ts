@@ -73,10 +73,11 @@ export function parse(text: string): unknown {
   }
 }
 
-export async function ask(ctx: PluginContext, purpose: string, system: string, user: string, json?: Record<string, unknown>): Promise<string> {
+/** The lead's own calls (splitting the work, the summary) run on the top tier; a team lead is always S. */
+export async function ask(ctx: PluginContext, purpose: string, system: string, user: string, json?: Record<string, unknown>, tier: 'deep' | 'standard' = 'deep'): Promise<string> {
   const response = await ctx.llm.complete({
     purpose,
-    tier: 'standard',
+    tier,
     sensitivity: 'sensitive',
     messages: [
       { role: 'system', content: system },

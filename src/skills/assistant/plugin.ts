@@ -31,6 +31,7 @@ import { companySection } from './company-context.js';
 import { ownChat, withinBudget } from './prompt-budget.js';
 import { Initiative, initiativeTool } from './initiative.js';
 import { createTeamTool } from './team-describe-tool.js';
+import { upgradeTeamTiers } from '../../core/bots/teams.js';
 import { createBotTool, delegateTool, forScheduledRun, mentionSection, personaSection, rosterSection, withoutDelegation } from './bots.js';
 
 export interface AssistantSkillOptions {
@@ -229,6 +230,11 @@ export function assistantSkill(opts: AssistantSkillOptions = {}): Plugin {
         if (made > 0) await ctx.tryUse(Contracts.notifier)?.notify({ kind: 'bots.teams', text: korean ? `문서를 보고 팀 ${made}개를 만들었어요. 봇 목록에서 볼 수 있어요.` : `Made ${made} teams from your documents.` }).catch(() => undefined);
       });
       // role prompts saved earlier with the model's preface in them ("역할 프롬프트를 아래에 작성했어요…") are cleaned once
+      // existing teams move to today's tier rules (leads on S) and their purposes are set again
+      ctx.bus.on('app.started', async () => {
+        const directory = ctx.tryUse(Contracts.bots);
+        if (directory !== undefined) await upgradeTeamTiers(directory, ctx.tryUse(Contracts.llmControl)).catch(() => 0);
+      });
       ctx.bus.on('app.started', () => {
         const directory = bots();
         if (directory !== undefined) void cleanStoredInstructions(directory).catch(() => undefined);

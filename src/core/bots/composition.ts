@@ -62,11 +62,11 @@ export function checkComposition(proposal: Composition, input: CompositionInput)
   const risky = isRisky(input);
   let reviewerCount = clamp(proposal.reviewerCount, REVIEWER_RANGE);
   if (risky && reviewerCount < 1) reviewerCount = 1;
-  let lead = proposal.tiers.lead;
+  // a team lead is always S (also over budget: the lead's calls are few and decide the rest)
+  const lead: TierLetter = 'S';
   let staff = proposal.tiers.staff;
   let reviewer = proposal.tiers.reviewer ?? lead;
   if (input.overBudget) {
-    lead = down(lead);
     staff = down(staff);
     reviewer = down(reviewer);
   }
@@ -90,7 +90,7 @@ export function defaultComposition(input: CompositionInput): Composition {
     {
       staffCount: 3,
       reviewerCount: risky ? 1 : 0,
-      tiers: { lead: 'A', staff: 'B', reviewer: 'S' },
+      tiers: { lead: 'S', staff: 'A', reviewer: 'S' },
       reason: input.korean ? (risky ? '기본 구성이에요. 확인이 필요한 일이라 검수를 뒀어요' : '기본 구성이에요') : 'default team',
     },
     input,

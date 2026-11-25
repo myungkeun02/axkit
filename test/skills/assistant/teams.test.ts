@@ -45,7 +45,7 @@ describe('bot teams, team rooms and lead meetings (R16, R17)', () => {
       const view = (await (await api(h, token, 'views/bots')).json()) as { data: { groups: { id: string; meetingChannel?: string; teams?: { id: string; members: string[]; tiers: Record<string, string> }[]; bots: { id: string; rank?: string; tier?: string }[] }[] } };
       const group = view.data.groups.find((g) => g.id === 'hanbit-lab');
       expect(group?.meetingChannel).toBe('meet-hanbit-lab');
-      expect(group?.teams?.[0]).toMatchObject({ id: 'team-app', members: ['app-lead', 'app-s1', 'app-s2', 'app-s3', 'app-review'], tiers: { lead: 'A', staff: 'C', reviewer: 'S' } });
+      expect(group?.teams?.[0]).toMatchObject({ id: 'team-app', members: ['app-lead', 'app-s1', 'app-s2', 'app-s3', 'app-review'], tiers: { lead: 'S', staff: 'C', reviewer: 'S' } });
       expect(group?.bots.find((b) => b.id === 'app-review')).toMatchObject({ rank: 'reviewer', tier: 'S' });
       expect(friendlyModel('claude-opus-5-5')).toBe('Claude Opus 5.5');
       expect(friendlyModel('opus')).toBe('Claude Opus');

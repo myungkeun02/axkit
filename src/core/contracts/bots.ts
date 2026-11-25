@@ -44,7 +44,8 @@ export function teamName(raw: string): string {
   return `${(at >= TEAM_NAME_MAX / 2 ? cut.slice(0, at) : cut).trimEnd()}…`;
 }
 
-export const DEFAULT_TIERS: TeamTiers = { lead: 'A', staff: 'B', reviewer: 'S' };
+/** Leads always plan and decide on the top tier (S); staff on A so they use their tools well. */
+export const DEFAULT_TIERS: TeamTiers = { lead: 'S', staff: 'A', reviewer: 'S' };
 export const TEAM_ID = /^team-[a-z0-9-]{1,25}$/;
 /** A company's lead meeting room (R17). */
 export function meetingChannel(groupId: string): string {

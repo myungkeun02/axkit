@@ -61,7 +61,8 @@ export function membersOf(team: BotTeam, bots: readonly Bot[]): Bot[] {
 }
 
 export function tierOfBot(team: BotTeam, bot: Bot): TierLetter {
-  if (bot.rank === 'lead') return team.tiers.lead;
+  // a team lead always works on S, whatever an older plan or the sizing harness wrote
+  if (bot.rank === 'lead') return 'S';
   if (bot.rank === 'reviewer') return team.tiers.reviewer ?? DEFAULT_TIERS.reviewer ?? 'S';
   return team.tiers.staff;
 }
@@ -148,7 +149,7 @@ export async function setTeamTiers(directory: BotDirectory, teamId: string, tier
   const team = (await directory.teams()).find((item) => item.id === teamId);
   if (team === undefined) return undefined;
   const merged: TeamTiers = {
-    lead: tiers.lead ?? team.tiers.lead,
+    lead: 'S',
     staff: tiers.staff ?? team.tiers.staff,
     ...(team.tiers.reviewer !== undefined || team.kind === 'dev' ? { reviewer: tiers.reviewer ?? team.tiers.reviewer ?? 'S' } : {}),
   };
@@ -189,4 +190,23 @@ export async function resizeTeam(directory: BotDirectory, teamId: string, staffC
   await directory.upsertTeam(next);
   await giveDefaultInstructions(directory, next, korean);
   return next;
+}
+
+/**
+ * At start, every team runs on today's rules: its lead on S, and staff the harness (not the owner) left on B or C
+ * moved up to A, so members use their tools well. The owner's own choices stay.
+ */
+export async function upgradeTeamTiers(directory: BotDirectory, control: LlmControl | undefined): Promise<number> {
+  const bots = await directory.list();
+  let changed = 0;
+  for (const team of await directory.teams()) {
+    const lowStaff = team.decidedBy !== 'owner' && (team.tiers.staff === 'B' || team.tiers.staff === 'C');
+    const next: BotTeam = team.tiers.lead === 'S' && !lowStaff ? team : { ...team, tiers: { ...team.tiers, lead: 'S', ...(lowStaff ? { staff: 'A' as const } : {}) } };
+    if (next !== team) {
+      await directory.upsertTeam(next);
+      changed += 1;
+    }
+    await applyTeamTiers(next, bots, control);
+  }
+  return changed;
 }

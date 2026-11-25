@@ -127,12 +127,13 @@ describe('team composition harness (R16)', () => {
     expect(checked).toMatchObject({ staffCount: 6, reviewerCount: 1, tiers: { lead: 'S', staff: 'B', reviewer: 'S' } });
     expect(checked.reason).toContain('검수 1명을 더했어요');
     const cheap = checkComposition({ staffCount: 2, reviewerCount: 1, tiers: { lead: 'A', staff: 'C', reviewer: 'A' }, reason: 'r' }, { ...input, overBudget: true });
-    expect(cheap.tiers).toEqual({ lead: 'B', staff: 'C', reviewer: 'B' });
+    // the lead stays on S even over budget; risky work keeps the reviewer as strong as the lead
+    expect(cheap.tiers).toEqual({ lead: 'S', staff: 'C', reviewer: 'S' });
     expect(defaultComposition({ ...input, name: '여행', purpose: '여행 계획' })).toMatchObject({ staffCount: 3, reviewerCount: 0 });
   });
 
   it('falls back to the rules when the model answers badly', async () => {
     const llm: LlmGateway = { complete: async () => ({ text: 'no json', providerId: 'f', model: 'm', usage: { inputTokens: 0, outputTokens: 0, costUsd: 0 } }) };
-    expect(await decideComposition(llm, input)).toMatchObject({ reviewerCount: 1, tiers: { lead: 'A', reviewer: 'S' } });
+    expect(await decideComposition(llm, input)).toMatchObject({ reviewerCount: 1, tiers: { lead: 'S', reviewer: 'S' } });
   });
 });
