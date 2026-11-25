@@ -34,8 +34,8 @@ describe('googleCalendarConnector', () => {
     ).resolves.toEqual([]);
 
     expect(fake.calls[0]?.url.hostname).toBe('oauth2.googleapis.com');
-    expect(fake.calls[1]?.url.pathname).toBe('/calendar/v3/calendars/primary/events');
-    expect(fake.calls[1]?.headers.get('authorization')).toBe('Bearer access-1');
+    expect(fake.calls.find((call) => call.url.pathname.endsWith('/events'))?.url.pathname).toBe('/calendar/v3/calendars/primary/events');
+    expect(fake.calls.find((call) => call.url.pathname.endsWith('/events'))?.headers.get('authorization')).toBe('Bearer access-1');
   });
 });
 

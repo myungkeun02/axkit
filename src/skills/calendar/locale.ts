@@ -11,6 +11,7 @@ export interface CalendarTexts {
   readonly timeSeparator: string;
   readonly locationLabel: string;
   readonly attendeesLabel: string;
+  readonly calendarLabel: string;
   readonly inviteNote: string;
   readonly evidenceLabel: string;
   /** Localized wording for the English guesses produced by core/time/date-spec. */
@@ -26,6 +27,7 @@ const KO: CalendarTexts = {
   timeSeparator: '–',
   locationLabel: '위치',
   attendeesLabel: '참석자',
+  calendarLabel: '캘린더',
   inviteNote: '초대 메일이 가요',
   evidenceLabel: '근거',
   guesses: {
@@ -46,6 +48,7 @@ const EN: CalendarTexts = {
   timeSeparator: '–',
   locationLabel: 'Location',
   attendeesLabel: 'Attendees',
+  calendarLabel: 'Calendar',
   inviteNote: 'Invitations will be emailed',
   evidenceLabel: 'Evidence',
   guesses: {

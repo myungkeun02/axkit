@@ -30,7 +30,7 @@ describe('connectGoogle', () => {
     });
 
     expect(result.grantedScopes).toEqual(['https://www.googleapis.com/auth/gmail.readonly']);
-    expect(result.missingScopes).toEqual([GOOGLE_SCOPES[0], GOOGLE_SCOPES[2]]);
+    expect(result.missingScopes).toEqual([GOOGLE_SCOPES[0], GOOGLE_SCOPES[2], GOOGLE_SCOPES[3]]);
     expect(await secrets.get('google.oauth-client')).toBe(
       JSON.stringify({ clientId: 'client-id', clientSecret: 'secret' }),
     );

@@ -17,6 +17,7 @@ import { mobileBridge } from '../../../src/mobile/plugin.js';
 import { greetingSkill } from '../../../src/skills/greeting/plugin.js';
 import { knowledgeSkill } from '../../../src/skills/knowledge/plugin.js';
 import { Contracts } from '../../../src/core/contracts/index.js';
+import type { EventDraft } from '../../../src/core/contracts/index.js';
 import { flush } from '../../core/helpers.js';
 import { FakeDiscordPort } from '../discord/fake-port.js';
 
@@ -572,6 +573,40 @@ describe('usage, approvals, health and knowledge views', () => {
       await api(h, token, 'views/calendar/add', { title: '휴가', allDay: true, start: '2026-11-21' });
       expect(created[1]).toMatchObject({ allDay: true, start: '2026-11-21', end: '2026-11-22' });
       expect((await api(h, token, 'views/calendar/add', { title: 'x', allDay: true, start: '2026-11-21T10:00' })).status).toBe(400);
+    } finally {
+      await h.stop();
+    }
+  });
+
+  it('calendar view names the calendar of each event, lists the calendars and adds to the chosen one', async () => {
+    const created: EventDraft[] = [];
+    const month = new Date().toISOString().slice(0, 7);
+    const calendar: Plugin = {
+      manifest: { id: 'test.calendar', kind: 'connector', title: 'cal' },
+      setup(ctx) {
+        ctx.provide(Contracts.calendarRead, {
+          listEvents: async () => [{ id: 'b1', title: '고객 미팅', start: `${month}-10T05:00:00.000Z`, end: `${month}-10T06:00:00.000Z`, allDay: false, calendar: 'biz' }],
+          calendars: async () => ({ calendars: [{ id: 'primary', name: 'me', primary: true, writable: true }, { id: 'biz-id', name: 'biz', primary: false, writable: true }] }),
+        });
+        ctx.provide(Contracts.calendarWrite, {
+          createEvent: async (draft) => {
+            created.push(draft);
+            return { id: 'e1', title: draft.title, start: draft.start, end: draft.end, allDay: draft.allDay, calendar: 'biz' };
+          },
+        });
+      },
+    };
+    const h = await start('app', [calendar]);
+    try {
+      const token = await pairApp(h);
+      const body = (await (await api(h, token, `views/calendar?month=${month}`)).json()) as {
+        data: { calendars: { id: string; name: string }[]; days: { events: { id: string; calendar?: string }[] }[] };
+      };
+      expect(body.data.calendars.map((item) => item.name)).toEqual(['me', 'biz']);
+      expect(body.data.days.flatMap((day) => day.events)).toEqual([expect.objectContaining({ id: 'b1', calendar: 'biz' })]);
+      const ok = await api(h, token, 'views/calendar/add', { title: '미팅', allDay: false, start: '2026-11-20T15:00:00+09:00', calendar: 'biz-id' });
+      expect(await ok.json()).toMatchObject({ ok: true, data: { id: 'e1', calendar: 'biz' } });
+      expect(created[0]?.calendar).toBe('biz-id');
     } finally {
       await h.stop();
     }

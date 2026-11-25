@@ -21,6 +21,8 @@ export interface ListedEvent {
   location?: string;
   /** The owner's account it is on, when more than one is connected. */
   account?: string;
+  /** The calendar it is on, when the owner has more than one. */
+  calendar?: string;
   attendees?: readonly string[];
   /** Human-readable local range, e.g. "11월 20일 (금) 15:00–16:00". */
   local: string;
@@ -60,9 +62,33 @@ export function listEventsTool(deps: ListDeps): Tool<ListEventsInput, ListedEven
           allDay: event.allDay,
           ...(event.location !== undefined ? { location: event.location } : {}),
           ...(event.account !== undefined ? { account: event.account } : {}),
+          ...(event.calendar !== undefined ? { calendar: event.calendar } : {}),
           ...(event.attendees !== undefined ? { attendees: event.attendees } : {}),
           local: formatEventLocal(event, deps.timeZone, deps.texts),
         }));
+    },
+  };
+}
+
+const calendarsInput = z.object({});
+
+/** Tool "calendar.calendars": the owner's calendars (those shown in their calendar app), for choosing where an event goes. */
+export function calendarsTool(deps: { reader: CalendarReader }): Tool<Record<string, never>, Record<string, unknown>> {
+  return {
+    name: 'calendar.calendars',
+    description:
+      "List the owner's calendars (name, id, whether events can be added, description). Use before calendar.add_event when the event could belong on more than one calendar.",
+    input: calendarsInput,
+    effects: ['read'],
+    async run() {
+      if (deps.reader.calendars === undefined) return { calendars: [{ id: 'primary', name: 'main', primary: true, writable: true }] };
+      const list = await deps.reader.calendars();
+      return {
+        calendars: list.calendars,
+        ...(list.limited === true
+          ? { note: "Only the main calendar can be read: the owner's Google sign-in lacks the calendar-list permission. Tell them to run `ax-kit connect google` once more on the assistant's Mac to see and use every calendar." }
+          : {}),
+      };
     },
   };
 }

@@ -101,7 +101,7 @@ export function todayView(ctx: PluginContext, log: AppEventLog, geo?: GeoCache):
         : (await calendar.listEvents(range).catch(() => []))
             .filter((event) => event.allDay || Date.parse(event.end) > now.getTime())
             .slice(0, MAX_ROWS)
-            .map((event) => ({ id: event.id, title: event.title, start: event.start, end: event.end, allDay: event.allDay, ...(event.location !== undefined ? { place: event.location } : {}), source: 'calendar' }));
+            .map((event) => ({ id: event.id, title: event.title, start: event.start, end: event.end, allDay: event.allDay, ...(event.location !== undefined ? { place: event.location } : {}), ...(event.calendar !== undefined ? { calendar: event.calendar } : {}), source: 'calendar' }));
       const withGeo = events === null || geo === undefined ? events : await geo.decorate(events);
       const todos = todo === undefined
         ? null

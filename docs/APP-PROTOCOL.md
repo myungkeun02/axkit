@@ -890,3 +890,13 @@ Ctrl+C나, 5분 넘게 남았을 때 한 번 묻는 "백그라운드로 두고 �
 - 서버만 바뀜. 대화 도구 `knowledge.learn_preview {name | source+id}`(읽기: 파일을 읽고 넣을·고칠 줄 목록 제안)와 `knowledge.learn_apply {proposal_id, skip?}`(쓰기, 항상 결재 카드: 카드 본문에 바뀌는 줄과 지금 내용).
 - 승인된 줄은 `origin:"file"`, `sources:["Drive: 파일 이름"]`로 지식 문서에 들어감(§5.3 `knowledge` 뷰의 `origin`에 `"file"`이 새로 올 수 있음 — 모르는 값은 "추정"처럼 보여 주면 됨). 처음 알아보기·기억 정리가 다시 돌아도 지워지지 않고, 오너가 고친 줄은 덮지 않음. 지식 화면의 "틀림"으로 고칠 수 있음.
 - 드라이브 화면(§34) 줄의 `message`는 "요약하기 / 지식 문서에 반영하기" 중 고르게 묻는 문장으로 바뀜.
+
+## 36. 캘린더 여러 개 (2026-11-25)
+
+- 서버만 바뀜. 일정 읽기는 기본 캘린더만이 아니라 오너가 구글 캘린더에서 체크해 둔 모든 캘린더(숨김·체크 해제 제외, 최대 15개). 일정에 `calendar`(캘린더 이름)가 붙음(캘린더가 둘 이상일 때). 같은 회의가 두 캘린더에 있으면 한 번만.
+- 대화 도구 `calendar.calendars`(이름·id·쓸 수 있는지·설명), `calendar.add_event`에 `calendar`(id 또는 이름): 비서가 이름·설명·비슷한 일정이 있는 곳을 보고 고름, 오너가 말하면 그대로. 없으면 기본 캘린더.
+- 권한 `calendar.calendarlist.readonly`가 새로 필요함(연결할 때 요청). 그 전 로그인은 기본 캘린더만 읽히고 `calendar.calendars`가 `limited`를 알림 → 비서 맥에서 `ax-kit connect google`을 한 번 더.
+- **일정 화면(R5 `views/calendar`)에 새 필드**(모두 선택, 모르는 앱은 무시해도 됨):
+  - `events[].calendar?`(캘린더 이름, 둘 이상일 때)·`events[].account?`(구글 계정이 둘 이상일 때). `views/today` 일정에도 `calendar?`.
+  - 응답 맨 위 `calendars?: [{id, name, primary, writable, description?, account?}]` — 범례(캘린더마다 색)와 추가할 때 고르는 목록. `writable:false`(공휴일 등)는 고르는 목록에서 뺄 것. `calendarsLimited?: true`면 "기본 캘린더만 보여요 — 비서 맥에서 `ax-kit connect google`" 안내.
+  - `add`에 `calendar?`(`calendars[].id` 권장, 이름도 됨). 없으면 기본 캘린더. 응답 `{id, calendar?}`(들어간 캘린더 이름).

@@ -2,7 +2,7 @@ import { Contracts } from '../../core/contracts/index.js';
 import type { Plugin } from '../../core/plugin/types.js';
 import { calendarTexts } from './locale.js';
 import { addEventTool } from './tools-add.js';
-import { listEventsTool } from './tools-list.js';
+import { calendarsTool, listEventsTool } from './tools-list.js';
 
 /** Calendar skill: list events and create events over the calendar capabilities. */
 export function calendarSkill(): Plugin {
@@ -23,6 +23,7 @@ export function calendarSkill(): Plugin {
       };
       ctx.registerTool(listEventsTool(deps));
       ctx.registerTool(addEventTool(deps));
+      ctx.registerTool(calendarsTool(deps));
     },
   };
 }

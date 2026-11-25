@@ -20,6 +20,17 @@ const addInput = z.object({
   durationMinutes: z.number().int().min(5).max(1440).optional().describe('Defaults to 60.'),
   location: z.string().min(1).max(200).optional(),
   attendees: z.array(z.email()).max(20).optional().describe('Email addresses; invitations are sent to them.'),
+  calendar: z
+    .string()
+    .trim()
+    .min(1)
+    .max(200)
+    .optional()
+    .describe(
+      'When the owner has more than one calendar (calendar.calendars): the one this event belongs on, by its id or name. ' +
+        'Judge by the calendar names and descriptions and by where similar events already are (calendar.list_events shows each event\'s calendar), ' +
+        'e.g. a work meeting on a "biz"/company calendar, a family dinner on a personal one. An explicit choice by the owner always wins. Omit for the main calendar.',
+    ),
   evidence: z.string().min(2).max(300).describe(EVIDENCE_HINT),
 });
 
@@ -103,6 +114,7 @@ export function addEventTool(deps: AddDeps): Tool<AddEventInput, AddEventOutput>
       if (input.attendees !== undefined && input.attendees.length > 0) {
         lines.push(`${deps.texts.attendeesLabel}: ${input.attendees.join(', ')} — ${deps.texts.inviteNote}`);
       }
+      if (input.calendar !== undefined) lines.push(`${deps.texts.calendarLabel}: ${input.calendar}`);
       lines.push(`${deps.texts.evidenceLabel}: "${input.evidence}"`);
       return lines.join('\n');
     },
@@ -131,6 +143,7 @@ export function addEventTool(deps: AddDeps): Tool<AddEventInput, AddEventOutput>
         allDay: times.allDay,
         ...(input.location !== undefined ? { location: input.location } : {}),
         ...(input.attendees !== undefined ? { attendees: input.attendees } : {}),
+        ...(input.calendar !== undefined ? { calendar: input.calendar } : {}),
       };
       return { status: 'created', event: await deps.writer.createEvent(draft) };
     },

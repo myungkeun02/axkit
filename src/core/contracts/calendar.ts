@@ -12,6 +12,27 @@ export interface CalendarEvent {
   url?: string;
   /** Which of the owner's accounts it is on (its address), when more than one is connected. */
   account?: string;
+  /** The calendar it is on (its name), when the owner has more than one. */
+  calendar?: string;
+}
+
+/** One of the owner's calendars (Google: those checked in the calendar list). */
+export interface CalendarInfo {
+  /** What `EventDraft.calendar` takes. */
+  id: string;
+  name: string;
+  primary: boolean;
+  /** The owner can add events to it (owner or writer access). */
+  writable: boolean;
+  description?: string;
+  /** The account it belongs to, when more than one is connected. */
+  account?: string;
+}
+
+export interface CalendarList {
+  calendars: CalendarInfo[];
+  /** Only the main calendar could be listed (the sign-in lacks the calendar-list permission). */
+  limited?: boolean;
 }
 
 export interface EventDraft {
@@ -23,6 +44,8 @@ export interface EventDraft {
   description?: string;
   /** Email addresses. Inviting people reaches them, so tools must add the `send` effect. */
   attendees?: readonly string[];
+  /** Which calendar (a `CalendarInfo.id` or its name); the main calendar when left out. */
+  calendar?: string;
 }
 
 export interface TimeRange {
@@ -32,7 +55,9 @@ export interface TimeRange {
 
 /** Capability "calendar.read". */
 export interface CalendarReader {
+  /** Events of every calendar the owner shows, not only the main one. */
   listEvents(range: TimeRange): Promise<CalendarEvent[]>;
+  calendars?(): Promise<CalendarList>;
 }
 
 /** Capability "calendar.write". */

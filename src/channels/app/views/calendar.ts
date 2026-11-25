@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import { Contracts } from '../../../core/contracts/index.js';
-import type { CalendarEvent } from '../../../core/contracts/index.js';
+import type { CalendarEvent, CalendarInfo, CalendarReader } from '../../../core/contracts/index.js';
 import type { AppView } from '../../../core/contracts/device-api.js';
 import { ViewInputError } from '../../../core/contracts/device-api.js';
 import type { PluginContext } from '../../../core/plugin/types.js';
@@ -17,14 +17,24 @@ const addSchema = z
     start: z.string().min(10).max(40),
     end: z.string().min(10).max(40).optional(),
     place: z.string().trim().max(200).optional(),
+    /** Which calendar (an id from `calendars`, or a name); the main one when left out. */
+    calendar: z.string().trim().min(1).max(300).optional(),
   })
   .refine((v) => (v.allDay ? DATE.test(v.start) && (v.end === undefined || DATE.test(v.end)) : !Number.isNaN(Date.parse(v.start)) && (v.end === undefined || !Number.isNaN(Date.parse(v.end)))))
   .refine((v) => v.end === undefined || (v.allDay ? v.end > v.start : Date.parse(v.end) > Date.parse(v.start)));
 
 interface DayView {
   date: string;
-  events: { id: string; title: string; start: string; end?: string; allDay?: boolean; place?: string; geo?: Geo }[];
+  events: { id: string; title: string; start: string; end?: string; allDay?: boolean; place?: string; calendar?: string; account?: string; geo?: Geo }[];
   done: { id: string; title: string; at: string; bot?: { id: string; name: string }; team?: string; detail?: string }[];
+}
+
+/** The owner's calendars for the screen (a legend and a picker for `add`), when the connector can list them. */
+async function calendarsOf(reader: CalendarReader | undefined): Promise<{ calendars?: CalendarInfo[]; calendarsLimited?: true }> {
+  if (reader?.calendars === undefined) return {};
+  const list = await reader.calendars().catch(() => undefined);
+  if (list === undefined) return {};
+  return { calendars: list.calendars, ...(list.limited === true ? { calendarsLimited: true as const } : {}) };
 }
 
 function dayOfEvent(event: CalendarEvent, zone: string): string {
@@ -57,9 +67,10 @@ export function calendarView(ctx: PluginContext, geo?: GeoCache): AppView {
                 end,
                 allDay: v.allDay,
                 ...(v.place !== undefined && v.place !== '' ? { location: v.place } : {}),
+                ...(v.calendar !== undefined ? { calendar: v.calendar } : {}),
               });
               await ctx.tryUse(Contracts.workLog)?.add({ at: ctx.clock.now(), title: `일정 추가: ${v.title}`, kind: 'action' }).catch(() => undefined);
-              return { id: event.id };
+              return { id: event.id, ...(event.calendar !== undefined ? { calendar: event.calendar } : {}) };
             },
           },
         }
@@ -83,6 +94,8 @@ export function calendarView(ctx: PluginContext, geo?: GeoCache): AppView {
           end: event.end,
           ...(event.allDay ? { allDay: true } : {}),
           ...(event.location !== undefined ? { place: event.location } : {}),
+          ...(event.calendar !== undefined ? { calendar: event.calendar } : {}),
+          ...(event.account !== undefined ? { account: event.account } : {}),
         });
       }
       const work = ctx.tryUse(Contracts.workLog);
@@ -103,7 +116,7 @@ export function calendarView(ctx: PluginContext, geo?: GeoCache): AppView {
         day.events.sort((a, b) => a.start.localeCompare(b.start));
         if (geo !== undefined) day.events = await geo.decorate(day.events);
       }
-      return { month, timezone: zone, days: [...days.values()] };
+      return { month, timezone: zone, days: [...days.values()], ...(await calendarsOf(calendar)) };
     },
   };
 }

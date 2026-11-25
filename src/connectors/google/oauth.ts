@@ -5,6 +5,8 @@ export const GOOGLE_SCOPES = [
   'https://www.googleapis.com/auth/calendar.events',
   'https://www.googleapis.com/auth/gmail.readonly',
   'https://www.googleapis.com/auth/gmail.compose',
+  // which calendars the owner has (a work or shared calendar besides the main one); events stay under calendar.events
+  'https://www.googleapis.com/auth/calendar.calendarlist.readonly',
 ] as const;
 
 /**

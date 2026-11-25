@@ -337,3 +337,24 @@ describe('calendar.add_event', () => {
     expect(context.calendar.drafts).toHaveLength(1);
   });
 });
+
+describe('choosing a calendar', () => {
+  it('passes the chosen calendar to the writer and lists the calendars', async () => {
+    const context = await setup();
+    Object.assign(context.calendar, {
+      calendars: async () => ({ calendars: [{ id: 'primary', name: 'me', primary: true, writable: true }, { id: 'biz-id', name: 'biz', primary: false, writable: true, description: '회사 일정' }] }),
+    });
+    const result = doneOutput<AddEventOutput>(
+      await execute(
+        context,
+        'calendar.add_event',
+        { title: '고객 미팅', date: { kind: 'offset', days: 1 }, time: { hour: 3, minute: 0, meridiem: 'pm' }, calendar: 'biz', evidence: '내일 오후 3시에 회의가 있어요' },
+        ['내일 오후 3시에 회의가 있어요'],
+      ),
+    );
+    expect(result.status).toBe('created');
+    expect(context.calendar.drafts[0]?.calendar).toBe('biz');
+    const listed = doneOutput<{ calendars: { name: string }[] }>(await execute(context, 'calendar.calendars', {}));
+    expect(listed.calendars.map((item) => item.name)).toEqual(['me', 'biz']);
+  });
+});

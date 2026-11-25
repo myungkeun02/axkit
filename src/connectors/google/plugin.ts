@@ -17,7 +17,7 @@ export interface GoogleConnectorOptions {
   sleep?: (ms: number) => Promise<void>;
 }
 
-/** Connector for the owner's Google Calendar: the primary calendar of every connected account; new events on the first. */
+/** Connector for the owner's Google Calendar: every shown calendar of every connected account; new events where the draft says. */
 export function googleCalendarConnector(opts: GoogleConnectorOptions = {}): Plugin {
   return {
     manifest: {
@@ -27,9 +27,9 @@ export function googleCalendarConnector(opts: GoogleConnectorOptions = {}): Plug
       secrets: [...GOOGLE_SECRETS],
     },
     setup(ctx) {
-      const make = (key: string): GoogleCalendar => new GoogleCalendar({ request: accountRequest(ctx, opts, key).request, timeZone: ctx.assistant.timezone });
-      const first = make('');
-      const calendar = new MultiCalendar(accountServices(ctx, make, first), first);
+      const make = (key: string): GoogleCalendar =>
+        new GoogleCalendar({ request: accountRequest(ctx, opts, key).request, timeZone: ctx.assistant.timezone, now: () => ctx.clock.now().getTime() });
+      const calendar = new MultiCalendar(accountServices(ctx, make, make('')));
       ctx.provide(Contracts.calendarRead, calendar);
       ctx.provide(Contracts.calendarWrite, calendar);
     },

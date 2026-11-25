@@ -1,7 +1,7 @@
 /** Every contract type and helper value, re-exported from one place (index.ts adds the capability ids). */
 export { ViewInputError } from './device-api.js';
 
-export type { CalendarEvent, EventDraft, TimeRange, CalendarReader, CalendarWriter } from './calendar.js';
+export type { CalendarEvent, EventDraft, TimeRange, CalendarReader, CalendarWriter, CalendarInfo, CalendarList } from './calendar.js';
 export type {
   MailSummary,
   MailMessage,

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { MailSummary } from '../../../src/core/contracts/mail.js';
-import type { CalendarEvent } from '../../../src/core/contracts/calendar.js';
+import type { CalendarEvent, EventDraft } from '../../../src/core/contracts/calendar.js';
 import { joinId, readAccountList, splitId } from '../../../src/connectors/google/accounts.js';
 import type { AccountService } from '../../../src/connectors/google/account-services.js';
 import { removeGoogleAccount } from '../../../src/connectors/google/connect-account.js';
@@ -54,16 +54,22 @@ describe('more than one Google account', () => {
     expect((await multi.search({ limit: 5 })).map((m) => m.id)).toEqual(['a2~w']);
   });
 
-  it('merges calendars by start and creates on the first account', async () => {
+  it('merges calendars by start, and adds to the account whose calendar the draft names', async () => {
     const event = (id: string, start: string): CalendarEvent => ({ id, title: id, start, end: start, allDay: false });
     const created: string[] = [];
-    const reader = (events: CalendarEvent[]) => ({ listEvents: async () => events });
-    const multi = new MultiCalendar(two(reader([event('late', '2026-11-24T15:00:00+09:00')]), reader([event('early', '2026-11-24T09:00:00+09:00')])), {
-      createEvent: async (draft) => (created.push(draft.title), event('new', draft.start)),
+    const account = (who: string, events: CalendarEvent[], names: string[]) => ({
+      listEvents: async () => events,
+      calendars: async () => ({ calendars: names.map((name, index) => ({ id: index === 0 ? 'primary' : `${name}-id`, name, primary: index === 0, writable: true })) }),
+      createEvent: async (draft: EventDraft) => (created.push(`${who}:${draft.title}:${draft.calendar ?? 'main'}`), event('new', draft.start)),
     });
+    const multi = new MultiCalendar(two(account('me', [event('late', '2026-11-24T15:00:00+09:00')], ['me']), account('work', [event('early', '2026-11-24T09:00:00+09:00')], ['work', 'biz'])));
     expect((await multi.listEvents({ from: new Date(), to: new Date() })).map((e) => [e.id, e.account])).toEqual([['a2~early', 'work@y.test'], ['late', 'me@x.test']]);
-    await multi.createEvent({ title: 'meet', start: '2026-11-25T10:00:00+09:00', end: '2026-11-25T11:00:00+09:00', allDay: false });
-    expect(created).toEqual(['meet']);
+    expect((await multi.calendars()).calendars.map((c) => [c.id, c.account])).toEqual([['primary', 'me@x.test'], ['a2~primary', 'work@y.test'], ['a2~biz-id', 'work@y.test']]);
+    const draft = { start: '2026-11-25T10:00:00+09:00', end: '2026-11-25T11:00:00+09:00', allDay: false };
+    await multi.createEvent({ ...draft, title: 'plain' });
+    await multi.createEvent({ ...draft, title: 'by id', calendar: 'a2~biz-id' });
+    await multi.createEvent({ ...draft, title: 'by name', calendar: 'biz' });
+    expect(created).toEqual(['me:plain:main', 'work:by id:biz-id', 'work:by name:biz']);
   });
 
   it('removes an added account but never the first', async () => {
