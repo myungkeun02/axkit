@@ -36,7 +36,7 @@ describe('teams that find their own work', () => {
     expect(await initiative.tick(new Date('2026-11-25T10:05:00+09:00'))).toBe(2);
     expect(tasks.map((task) => task.bot).sort()).toEqual(['pm', 'qa']);
     expect(tasks[0]?.task).toContain('누가 시키지 않았어요');
-    expect(notices).toEqual(['[QA] 스스로 찾아서 했어요: 업무보드 로그에서 500 오류 3건을 찾아 정리했어요.']);
+    expect(notices).toEqual(["오늘 팀들이 스스로 찾아서 한 일이 1건 있어요(QA). 자세한 내용은 캘린더의 '한 일'에서 볼 수 있어요."]);
     // not again the same day; again the next day
     expect(await initiative.tick(new Date('2026-11-25T15:00:00+09:00'))).toBe(0);
     expect(await initiative.tick(new Date('2026-11-26T10:00:00+09:00'))).toBe(2);

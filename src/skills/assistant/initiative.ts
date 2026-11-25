@@ -85,6 +85,7 @@ export class Initiative {
     // the assistant's own improvement room works on ax-kit itself, not on the owner's work
     const teams = (await directory.teams()).filter((team) => state.last[team.id] !== day && lead(team) !== undefined && !team.id.startsWith('team-ax'));
     let ran = 0;
+    const done: string[] = [];
     for (const team of teams) {
       if (Object.values(state.last).filter((value) => value === day).length >= MAX_TEAMS_PER_DAY) break;
       state.last[team.id] = day;
@@ -94,7 +95,15 @@ export class Initiative {
       ran += 1;
       const summary = result?.status === 'done' ? String((result as { output?: { summary?: unknown } }).output?.summary ?? '') : '';
       if (summary === '' || NOTHING.test(summary)) continue;
-      await this.ctx.tryUse(Contracts.notifier)?.notify({ kind: 'bots.initiative', text: `[${team.name}] 스스로 찾아서 했어요: ${summary.slice(0, 400)}`, dedupeKey: `initiative:${team.id}:${day}` }).catch(() => undefined);
+      // the details go to the work log (calendar's "한 일"); the owner gets one short line for the whole day below
+      await this.ctx.tryUse(Contracts.workLog)?.add({ at: now, title: `${team.name}: ${summary.slice(0, 120)}`, kind: 'action', bot: { id: bot.id, name: bot.name }, detail: summary.slice(0, 1500) }).catch(() => undefined);
+      done.push(team.name);
+    }
+    if (done.length > 0) {
+      const text = this.korean
+        ? `오늘 팀들이 스스로 찾아서 한 일이 ${String(done.length)}건 있어요(${done.join(', ')}). 자세한 내용은 캘린더의 '한 일'에서 볼 수 있어요.`
+        : `Teams did ${String(done.length)} thing(s) on their own today (${done.join(', ')}). Details are under "done" in the calendar.`;
+      await this.ctx.tryUse(Contracts.notifier)?.notify({ kind: 'bots.initiative', text, dedupeKey: `initiative:${day}` }).catch(() => undefined);
     }
     return ran;
   }

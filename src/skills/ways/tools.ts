@@ -26,7 +26,7 @@ export interface WaysDeps {
 }
 
 function explain(result: WebRunResult, korean: boolean): string | undefined {
-  if (result.stopped === 'login') return korean ? '이 사이트에 로그인이 필요해요. Aside 브라우저에서 한 번 로그인해 두면 다음부터 할 수 있어요.' : 'This site needs a login in the Aside browser first.';
+  if (result.stopped === 'login') return korean ? LOGIN_NOTE_KO : LOGIN_NOTE_EN;
   if (result.stopped === 'payment') {
     if (result.cart !== undefined) return korean ? `결제 바로 전이에요: ${result.cart.items}, 합계 ${result.cart.total.toLocaleString('ko-KR')}원. 결제하려면 web.pay에 이 site와 total을 그대로 넘기세요(오너가 금액을 승인해요).` : `At the payment step: ${String(result.cart.total)} won. Call web.pay with this site and total; the owner approves it.`;
     return korean ? '결제 바로 전에서 멈췄어요. 금액을 읽지 못해서 결제는 직접 해 주세요.' : 'Stopped right before paying; the total could not be read.';
@@ -35,6 +35,11 @@ function explain(result: WebRunResult, korean: boolean): string | undefined {
   if (result.stopped === 'error') return korean ? '브라우저 작업이 실패했어요.' : 'The browser task failed.';
   return undefined;
 }
+
+const LOGIN_NOTE_KO =
+  '로그인이 필요한 사이트예요. browser.open_for_me로 이 사이트를 원격 브라우저(앱의 브라우저 화면)에 띄워 오너가 직접 로그인하게 하고, 오너가 "다 했어"라고 하면 같은 일을 browser.task로 이어서 해요. 로그인은 그 브라우저에 남아서 다음부터는 바로 돼요.';
+const LOGIN_NOTE_EN =
+  'This site needs a sign-in. Open it with browser.open_for_me so the owner signs in in the remote browser (the app\'s browser screen); when they say done, do the same task with browser.task. The login stays in that browser.';
 
 const lookInput = z.object({
   task: z.string().min(3).max(800).describe('What to find out, in plain words.'),
@@ -53,8 +58,17 @@ async function runWeb(deps: WaysDeps, mode: 'look' | 'do', value: z.infer<typeof
     throw new Error(deps.korean ? ko : app ? 'Aside is installed but its command-line tool is not; re-run the Google/Aside step of `ax-kit setup`. web.search still works.' : 'No web agent (Aside) on this Mac; web.search still works.');
   }
   const host = value.site !== undefined ? (hostOf(value.site) ?? value.site) : hostOf(value.task);
-  const result = await agent.run({ task: value.task, mode, ...(host !== undefined ? { site: host } : {}) });
   const now = deps.clock.now();
+  // a site the owner signed in to in the remote browser: its login lives there, so the work goes there too
+  const known = host !== undefined ? (await deps.store.sites()).find((site) => site.host === host) : undefined;
+  if (known?.loginIn === 'browser') {
+    const note = deps.korean
+      ? `${host ?? ''}은(는) 오너가 원격 브라우저에 로그인해 둔 사이트예요. 이 일은 browser.task로 해요(startUrl: https://${host ?? ''}). 로그인이 풀렸으면 browser.open_for_me로 다시 띄워 오너가 로그인하게 해요.`
+      : `${host ?? ''} is signed in in the remote browser: do this with browser.task (startUrl https://${host ?? ''}).`;
+    return { ok: false, useBrowser: true, note, ...(host !== undefined ? { site: host } : {}) };
+  }
+  const result = await agent.run({ task: value.task, mode, ...(host !== undefined ? { site: host } : {}) });
+  if (result.stopped === 'login' && host !== undefined) await deps.store.markLogin(host, now);
   if (host !== undefined) await deps.store.touchSite(host, now);
   // what worked once is the starting point next time
   if (result.ok) await deps.store.recordProcedure({ goal: value.task, ...(host !== undefined ? { site: host } : {}), how: result.answer.slice(0, 400) }, now);

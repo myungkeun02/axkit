@@ -26,7 +26,7 @@ export function waysSection(korean: boolean, sites: readonly KnownSite[], proced
   ];
   if (sites.length > 0) {
     lines.push('', korean ? "### The owner's sites" : "### The owner's sites");
-    for (const site of sites.slice(0, 15)) lines.push(`- ${site.host} (${site.label}): ${site.what}`);
+    for (const site of sites.slice(0, 15)) lines.push(`- ${site.host} (${site.label}): ${site.what}${site.loginIn === 'browser' ? (korean ? ' — 원격 브라우저에 로그인해 둠: browser.task로 해요' : ' — signed in in the remote browser: use browser.task') : ''}`);
   }
   if (procedures.length > 0) {
     lines.push('', '### Done before (start from these)');

@@ -87,7 +87,8 @@ export function selfDevPlugin(opts: SelfDevOptions): Plugin {
           await ctx.kv.delete(PENDING_KEY);
           const data = pending.data;
           post(`다시 켰어요 ✓ 새 코드(${data.commit})로 돌고 있어요.\n바뀐 것: ${data.summary}${data.installed ? '\n(패키지도 새로 설치했어요)' : ''}${data.needs !== '' ? `\n\n사람이 할 일:\n${data.needs}` : ''}`);
-          await ctx.tryUse(Contracts.notifier)?.notify({ kind: 'self-dev.applied', text: `ax 개선을 적용하고 다시 켰어요: ${data.summary.slice(0, 120)}` }).catch(() => undefined);
+          // the assistant improving itself is not the owner's news: it goes to the work log only
+          await ctx.tryUse(Contracts.workLog)?.add({ at: ctx.clock.now(), title: `ax 개선 적용: ${data.summary.slice(0, 120)}`, kind: 'action' }).catch(() => undefined);
         })().catch((error: unknown) => ctx.log.warn('self-dev: start report failed', { error: error instanceof Error ? error.message : 'error' }));
       });
 

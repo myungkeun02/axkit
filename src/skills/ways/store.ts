@@ -7,6 +7,9 @@ export interface KnownSite {
   what: string;
   addedAt: string;
   lastUsed?: string;
+  /** The owner signed in to it in the remote browser (the login stays in that browser's profile): work there goes through browser.task. */
+  loginIn?: 'browser';
+  loginAt?: string;
 }
 
 /** How a goal was reached once, kept so the next time starts from it. */
@@ -51,6 +54,14 @@ export class WaysStore {
     const all = await this.sites();
     await this.kv.set('sites', all.filter((item) => item.host !== host));
     return all.some((item) => item.host === host);
+  }
+
+  /** Remembers that this site's login lives in the remote browser; a site not known yet is added with its host as label. */
+  async markLogin(host: string, now: Date): Promise<void> {
+    const all = await this.sites();
+    const previous = all.find((item) => item.host === host);
+    const next: KnownSite = { host, label: previous?.label ?? host, what: previous?.what ?? '', addedAt: previous?.addedAt ?? now.toISOString(), ...(previous?.lastUsed !== undefined ? { lastUsed: previous.lastUsed } : {}), loginIn: 'browser', loginAt: now.toISOString() };
+    await this.kv.set('sites', [next, ...all.filter((item) => item.host !== host)].slice(0, MAX_SITES));
   }
 
   async touchSite(host: string, now: Date): Promise<void> {

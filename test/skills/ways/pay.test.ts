@@ -49,4 +49,14 @@ describe('paying after the owner approves the amount', () => {
     const agent = new AsideWebAgent({ command: 'a', run: async () => ({ code: 0, stdout: '{"outcome":"completed","answer":"TOTAL_CHANGED 26,000원"}', stderr: '', timedOut: false }), defaultTimeoutMinutes: 5 });
     expect(await agent.run({ task: 't', mode: 'pay', payment: { items: 'x', total: 24000 } })).toMatchObject({ ok: false, stopped: 'changed' });
   });
+
+  it('a login stop sends the owner to the remote browser, and that site then goes through browser.task', async () => {
+    const { runs, get } = tools([{ ok: false, answer: 'LOGIN_NEEDED', stopped: 'login' }]);
+    const first = (await get('web.look').run({ task: '주문 내역 보기', site: 'shop.example.com' }, {} as never)) as { note: string };
+    expect(first.note).toContain('browser.open_for_me');
+    const second = (await get('web.look').run({ task: '주문 내역 보기', site: 'shop.example.com' }, {} as never)) as { useBrowser: boolean; note: string };
+    expect(second).toMatchObject({ useBrowser: true });
+    expect(second.note).toContain('browser.task');
+    expect(runs).toHaveLength(1);
+  });
 });
