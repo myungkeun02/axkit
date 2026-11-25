@@ -61,6 +61,17 @@ export interface WeatherReport {
   observedAt: Date;
 }
 
+/** Where the owner usually sleeps and works, learned from the phone's location over the days. */
+export interface KnownPlaces {
+  home?: GeoPoint;
+  work?: GeoPoint;
+}
+
+/** Capability "life.known-places" (skill.day learns them). */
+export interface KnownPlacesSource {
+  get(): Promise<KnownPlaces>;
+}
+
 /** Capability "life.weather". */
 export interface WeatherSource {
   today(point: GeoPoint): Promise<WeatherReport>;

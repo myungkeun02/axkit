@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { MissingKeyError } from '../../../src/core/contracts/index.js';
+
 import { KmaWeather } from '../../../src/connectors/ko-life/kma.js';
 import { KO_SECRETS } from '../../../src/connectors/ko-life/secrets.js';
 import { envelope, fakeFetch, makeDeps, NOW } from './helpers.js';
@@ -133,14 +133,14 @@ describe('KmaWeather.today', () => {
     expect(report.air).toBeUndefined();
   });
 
-  it('throws MissingKeyError for the data.go.kr key', async () => {
-    const { weather } = weatherWith({ secrets: {} });
-
-    await expect(weather.today(SEOUL)).rejects.toBeInstanceOf(MissingKeyError);
-    await expect(weather.today(SEOUL)).rejects.toMatchObject({
-      secretName: KO_SECRETS.dataGoKr,
-      guide: expect.stringContaining('ax-kit secret set ko.data-go-kr.key'),
-    });
+  it('without the data.go.kr key, answers from the keyless Open-Meteo', async () => {
+    const fake = fakeFetch((url) =>
+      url.href.startsWith('https://api.open-meteo.com/')
+        ? Response.json({ current: { temperature_2m: 7.6, weather_code: 3 }, daily: { time: ['2026-11-17'], weather_code: [3], temperature_2m_max: [11.2], temperature_2m_min: [2.4], precipitation_probability_max: [20] } })
+        : new Response('unexpected', { status: 404 }),
+    );
+    const weather = new KmaWeather(makeDeps(fake.fetch, { secrets: {} }), { regionOf: async () => '서울특별시' }, undefined);
+    expect(await weather.today(SEOUL)).toMatchObject({ sky: '흐림', tempC: 8, minC: 2, maxC: 11, rainChance: 20 });
   });
 
   it('rejects an unexpected response shape without echoing the body', async () => {

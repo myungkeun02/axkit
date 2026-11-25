@@ -14,7 +14,7 @@ import type { TodoBackend, TodoReader, TodoSyncBackend, TodoWriter } from './tod
 import type { ContactsReader, DocsEditor, DocsReader, DocsWriter, SheetsReader, SheetsWriter } from './workspace.js';
 import type { OneTimeCodeVault, PhoneSignals, SmsReaderClaims } from './phone.js';
 import type { MemoryReader, MemoryWriter, PeopleReader, PeopleWriter } from './memory.js';
-import type { ParcelTracker, PlaceSource, PriceSearch, RouteSource, TransitSource, WeatherSource } from './life.js';
+import type { KnownPlacesSource, ParcelTracker, PlaceSource, PriceSearch, RouteSource, TransitSource, WeatherSource } from './life.js';
 import type { SpendReader } from './money.js';
 import type { AppFileShare, FileSource, FileSourceRegistry } from './files.js';
 import type { PageReader } from './web.js';
@@ -80,6 +80,7 @@ export const Contracts = {
   places: defineCapability<PlaceSource>('life.places'),
   routes: defineCapability<RouteSource>('life.routes'),
   weather: defineCapability<WeatherSource>('life.weather'),
+  knownPlaces: defineCapability<KnownPlacesSource>('life.known-places'),
   transit: defineCapability<TransitSource>('life.transit'),
   parcel: defineCapability<ParcelTracker>('life.parcel'),
   prices: defineCapability<PriceSearch>('life.prices'),

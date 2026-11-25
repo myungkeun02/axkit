@@ -13,6 +13,7 @@ export interface DayTexts {
 
   travelUrgent(title: string, hhmm: string, minutes: number): string;
   readonly travelNote: string;
+  travelAhead(title: string, hhmm: string, place: string, minutes: number, leave: string, mode: 'transit' | 'car' | undefined): string;
 
   readonly closeTitle: string;
   closeEventCount(count: number): string;
@@ -68,6 +69,8 @@ const KO: DayTexts = {
 
   travelUrgent: (title, hhmm, minutes) => `지금 출발하면 맞춰요: ${title} ${hhmm}, 약 ${minutes}분`,
   travelNote: '이동 시간은 대략적인 추정이에요.',
+  travelAhead: (title, hhmm, place, minutes, leave, mode) =>
+    `${hhmm} ${title}(${place})까지 지금 위치에서 ${mode === 'transit' ? '대중교통으로 ' : mode === 'car' ? '차로 ' : ''}약 ${String(minutes)}분 걸려요. ${leave}쯤 출발하면 돼요.${mode === undefined ? ' (직선거리로 어림한 시간이에요)' : ''}`,
 
   closeTitle: '오늘 마감',
   closeEventCount: (count) => `일정 ${count}개`,
@@ -119,6 +122,8 @@ const EN: DayTexts = {
 
   travelUrgent: (title, hhmm, minutes) => `Leave now to make it: ${title} ${hhmm}, about ${minutes} min`,
   travelNote: 'Travel time is a rough estimate.',
+  travelAhead: (title, hhmm, place, minutes, leave, mode) =>
+    `${title} at ${hhmm} (${place}): about ${String(minutes)} min from here${mode === 'transit' ? ' by transit' : mode === 'car' ? ' by car' : ''}. Leave around ${leave}.${mode === undefined ? ' (rough, straight-line estimate)' : ''}`,
 
   closeTitle: 'Day close',
   closeEventCount: (count) => `Events: ${count}`,

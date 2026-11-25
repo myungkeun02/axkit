@@ -1,5 +1,7 @@
 import { z } from 'zod';
 import type { GeoPoint, WeatherReport, WeatherSource } from '../../core/contracts/index.js';
+import { MissingKeyError } from '../../core/contracts/index.js';
+import { openMeteo } from './open-meteo.js';
 import { airQuality, normalizeSido } from './air.js';
 import type { KoLifeDeps } from './deps.js';
 import { keyOf } from './deps.js';
@@ -177,7 +179,12 @@ export class KmaWeather implements WeatherSource {
   ) {}
 
   async today(point: GeoPoint): Promise<WeatherReport> {
-    const key = await keyOf(this.deps, KO_SECRETS.dataGoKr);
+    const key = await this.keyOrNone();
+    if (key === undefined) {
+      const report = await openMeteo(this.deps.fetch, point, this.deps.clock.now());
+      if (report === undefined) throw new Error('No weather for this place.');
+      return report;
+    }
     const now = this.deps.clock.now();
     const { nx, ny } = kmaGrid(point.lat, point.lng);
     const forecast = await fetchItems(
@@ -197,7 +204,8 @@ export class KmaWeather implements WeatherSource {
 
   /** KMA's short-term forecast reaches about three days ahead; a later date has no report. */
   async forecast(point: GeoPoint, ymd: string): Promise<WeatherReport | undefined> {
-    const key = await keyOf(this.deps, KO_SECRETS.dataGoKr);
+    const key = await this.keyOrNone();
+    if (key === undefined) return openMeteo(this.deps.fetch, point, this.deps.clock.now(), ymd);
     const now = this.deps.clock.now();
     const compact = ymd.replaceAll('-', '');
     if (compact === kstWall(now).ymd) return this.today(point);
@@ -205,6 +213,16 @@ export class KmaWeather implements WeatherSource {
     const items = await fetchItems(this.deps, FORECAST_URL, requestParams(key, forecastBase(now), nx, ny));
     if (!items.some((item) => item.fcstDate === compact)) return undefined;
     return buildReport(items, [], now, compact);
+  }
+
+  /** The public-data key, or undefined before the owner adds it: then the keyless Open-Meteo answers instead. */
+  private async keyOrNone(): Promise<string | undefined> {
+    try {
+      return await keyOf(this.deps, KO_SECRETS.dataGoKr);
+    } catch (error) {
+      if (error instanceof MissingKeyError) return undefined;
+      throw error;
+    }
   }
 
   private async airOf(point: GeoPoint): Promise<WeatherReport['air'] | undefined> {

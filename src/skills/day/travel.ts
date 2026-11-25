@@ -106,23 +106,45 @@ async function checkTravel(ctx: PluginContext, bufferMinutes: number, texts: Day
   }
   if (destination === undefined) return;
 
-  const minutes = estimateMinutes(haversineKm(origin, destination));
+  const route = await routeMinutes(ctx, origin, destination);
+  const minutes = route?.minutes ?? estimateMinutes(haversineKm(origin, destination));
   const startMs = startMsOf(event);
   const leaveBy = startMs - (minutes + bufferMinutes) * 60_000;
-  if (now.getTime() < leaveBy) return;
-
   const notifier = ctx.tryUse(Contracts.notifier);
   if (notifier === undefined) {
     ctx.log.warn('day travel: no notifier available');
     return;
   }
   const hhmm = hhmmOf(event.start, ctx.assistant.timezone) ?? event.start;
+  // well ahead: how long it takes from here and when to leave, once per event
+  if (now.getTime() < leaveBy) {
+    if (leaveBy - now.getTime() > AHEAD_MS) return;
+    const told = `travel.ahead:${event.id}:${event.start}`;
+    if ((await ctx.kv.get<boolean>(told)) === true) return;
+    await ctx.kv.set(told, true);
+    const leave = hhmmOf(new Date(leaveBy).toISOString(), ctx.assistant.timezone) ?? '';
+    await notifier.notify({ kind: 'day.travel', dedupeKey: `ahead:${event.id}`, text: texts.travelAhead(event.title, hhmm, event.location, minutes, leave, route?.mode) });
+    return;
+  }
   await notifier.notify({
     kind: 'day.travel',
     urgent: true,
     dedupeKey: event.id,
     text: `${texts.travelUrgent(event.title, hhmm, minutes)}\n${texts.travelNote}`,
   });
+}
+
+/** The heads-up comes when leaving is at most this far off. */
+const AHEAD_MS = 60 * 60_000;
+
+/** Real travel time when the route services are connected: transit first, then car. */
+async function routeMinutes(ctx: PluginContext, from: GeoPoint, to: GeoPoint): Promise<{ minutes: number; mode: 'transit' | 'car' } | undefined> {
+  const routes = ctx.tryUse(Contracts.routes);
+  if (routes === undefined) return undefined;
+  const transit = await routes.transit(from, to).catch(() => undefined);
+  if (transit !== undefined) return { minutes: Math.ceil(transit.durationMin), mode: 'transit' };
+  const car = await routes.car(from, to).catch(() => undefined);
+  return car !== undefined ? { minutes: Math.ceil(car.durationMin), mode: 'car' } : undefined;
 }
 
 /** Registers the five-minute travel-time sweep. Capabilities are resolved on every run. */

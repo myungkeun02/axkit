@@ -86,6 +86,8 @@ export type {
   ParcelTracker,
   PriceOffer,
   PriceSearch,
+  KnownPlaces,
+  KnownPlacesSource,
 } from './life.js';
 export { MissingKeyError } from './life.js';
 export type {

@@ -25,12 +25,12 @@ export type HealthSettings = z.infer<typeof healthSchema>;
 export type WaterSettings = z.infer<typeof waterSchema>;
 export type MedSettings = z.infer<typeof medSchema>;
 
-/** Moments the assistant may speak first. Each is off until the owner turns it on. */
+/** Moments the assistant may speak first. The day ones are on; spending stays off until the owner turns it on. */
 const nudgesSchema = z.object({
   /** An event starts in 30–60 minutes and the data holds something to prepare. */
-  beforeEvent: z.boolean().default(false),
+  beforeEvent: z.boolean().default(true),
   /** Late morning and late afternoon: what is left today. */
-  midday: z.boolean().default(false),
+  midday: z.boolean().default(true),
   /** A payment much larger than the same category usually is. */
   spend: z.boolean().default(false),
   /** Lines these nudges may send per owner-zone day and per rolling hour. */
@@ -47,6 +47,10 @@ const configSchema = z.object({
   travel: z.boolean().default(true),
   /** A meeting with a video link (Meet, Zoom, Teams): its join link ten minutes before. */
   meetLinks: z.boolean().default(true),
+  /** Weekdays at work with nothing over lunch: "점심 드셔야죠!" and places nearby. */
+  lunch: z.boolean().default(true),
+  /** Learns home and work from the phone's location (for lunch and the briefing's weather). */
+  places: z.boolean().default(true),
   close: z.boolean().default(true),
   replies: z.boolean().default(true),
   voice: z.boolean().default(true),

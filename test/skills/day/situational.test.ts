@@ -116,7 +116,7 @@ async function nudgeSetup(llm: ScriptedLlm, nudges: Record<string, unknown>, eve
 
 describe('day nudges', () => {
   it('registers no job while every trigger is off', async () => {
-    const { scheduler } = await nudgeSetup(new ScriptedLlm(), {}, []);
+    const { scheduler } = await nudgeSetup(new ScriptedLlm(), { beforeEvent: false, midday: false }, []);
     expect(scheduler.jobs.has(NUDGES_JOB)).toBe(false);
   });
 

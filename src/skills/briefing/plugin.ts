@@ -61,7 +61,8 @@ async function weatherPointOf(
   const phone = ctx.tryUse(Contracts.phoneSignals);
   if (phone !== undefined) {
     try {
-      const location = await phone.latestLocation(180);
+      // overnight the phone may not have reported for hours; where it last was is still the best guess at 8 a.m.
+      const location = await phone.latestLocation(24 * 60);
       if (location !== undefined) return { lat: location.lat, lng: location.lng };
     } catch (error) {
       log.warn('briefing: phone location unavailable', {
@@ -69,8 +70,14 @@ async function weatherPointOf(
       });
     }
   }
-  return home === undefined ? undefined : { lat: home.lat, lng: home.lng };
+  if (home !== undefined) return { lat: home.lat, lng: home.lng };
+  const learned = await ctx.tryUse(Contracts.knownPlaces)?.get().catch(() => undefined);
+  if (learned?.home !== undefined) return learned.home;
+  // nothing known yet: the zone's capital, so the first briefings still carry the weather
+  return CAPITALS[ctx.assistant.timezone];
 }
+
+const CAPITALS: Record<string, GeoPoint> = { 'Asia/Seoul': { lat: 37.5665, lng: 126.978 } };
 
 async function buildMessage(
   ctx: PluginContext,

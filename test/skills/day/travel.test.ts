@@ -60,11 +60,20 @@ describe('day.travel', () => {
     expect(notifier.notices[0]?.text).toContain('약 19분');
   });
 
-  it('stays quiet while there is still time', async () => {
+  it('while there is still time, says once how long it takes and when to leave (not urgent)', async () => {
     const { notifier, scheduler } = await setup({ config: { travelBufferMinutes: 0 } });
     const early = new Date('2026-11-17T08:40:00+09:00');
 
     await scheduler.run('day.travel', early);
+    await scheduler.run('day.travel', early);
+    expect(notifier.notices).toHaveLength(1);
+    expect(notifier.notices[0]?.urgent).not.toBe(true);
+    expect(notifier.notices[0]?.text).toContain('쯤 출발하면 돼요');
+  });
+
+  it('stays quiet while leaving is more than an hour off', async () => {
+    const { notifier, scheduler } = await setup({ config: { travelBufferMinutes: 0 } });
+    await scheduler.run('day.travel', new Date('2026-11-17T06:30:00+09:00'));
     expect(notifier.notices).toHaveLength(0);
   });
 

@@ -129,6 +129,8 @@ async function loadSection<S, T>(
   }
 }
 
+const WEATHER_WAIT_MS = 3_000;
+
 /** Weather never fails the briefing: a missing location, key or service only drops the line. */
 async function loadWeather(
   weather: BriefingWeather | undefined,
@@ -137,7 +139,12 @@ async function loadWeather(
   if (weather === undefined) return { state: 'not_connected' };
   if (weather.point === undefined) return { state: 'no_location' };
   try {
-    return { state: 'ok', report: await weather.source.today(weather.point) };
+    // a slow weather service only drops the line: the briefing itself never waits long
+    const report = await Promise.race([
+      weather.source.today(weather.point),
+      new Promise<never>((_, reject) => setTimeout(() => reject(new Error('weather took too long')), WEATHER_WAIT_MS).unref?.()),
+    ]);
+    return { state: 'ok', report };
   } catch (error) {
     log.warn('briefing: weather could not be loaded', {
       error: error instanceof Error ? error.message : String(error),
