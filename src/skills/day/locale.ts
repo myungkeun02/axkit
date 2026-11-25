@@ -60,7 +60,7 @@ const KO: DayTexts = {
   allDay: '종일',
   locationMark: '@',
 
-  prepTitle: '내일 준비',
+  prepTitle: '내일 일정을 미리 봤어요. 챙길 것만 추렸어요.',
   prepLocationCheck: '장소 확인',
   prepLocationMissing: '장소가 안 적혀 있어요',
   prepCommitment: (name, text) => {
@@ -74,7 +74,7 @@ const KO: DayTexts = {
   travelAhead: (title, hhmm, place, minutes, leave, mode) =>
     `${hhmm} ${title}(${place})까지 지금 위치에서 ${mode === 'transit' ? '대중교통으로 ' : mode === 'car' ? '차로 ' : ''}약 ${String(minutes)}분 걸려요. ${leave}쯤 출발하면 돼요.${mode === undefined ? ' (직선거리로 어림한 시간이에요)' : ''}`,
 
-  closeTitle: '오늘 마감',
+  closeTitle: '오늘 하루 정리해 봤어요.',
   closeEventCount: (count) => `일정 ${count}개`,
   closeCompletedCount: (count) => `할 일 ${count}개 완료`,
   openTodosTitle: '남은 할 일',
@@ -118,7 +118,7 @@ const EN: DayTexts = {
   allDay: 'All day',
   locationMark: '@',
 
-  prepTitle: 'Tomorrow prep',
+  prepTitle: "I looked at tomorrow. Here's what to get ready.",
   prepLocationCheck: 'Location confirmed',
   prepLocationMissing: 'No location written',
   prepCommitment: (name, text) => `Promise to ${name}: ${text}`,
@@ -129,7 +129,7 @@ const EN: DayTexts = {
   travelAhead: (title, hhmm, place, minutes, leave, mode) =>
     `${title} at ${hhmm} (${place}): about ${String(minutes)} min from here${mode === 'transit' ? ' by transit' : mode === 'car' ? ' by car' : ''}. Leave around ${leave}.${mode === undefined ? ' (rough, straight-line estimate)' : ''}`,
 
-  closeTitle: 'Day close',
+  closeTitle: "Here's how today went.",
   closeEventCount: (count) => `Events: ${count}`,
   closeCompletedCount: (count) => `To-dos done: ${count}`,
   openTodosTitle: 'Still open',

@@ -9,6 +9,8 @@ export interface SectionTexts {
 /** Every sentence the briefing shows. Korean is the default. */
 export interface BriefingTexts {
   greeting(ownerName: string | undefined, date: string): string;
+  /** The last line: what to look at first, and an offer to help. */
+  closing(first: string | undefined): string;
   date(month: number, day: number, weekday: Weekday): string;
   titles: SectionTexts;
   empty: SectionTexts;
@@ -62,6 +64,7 @@ const KO: BriefingTexts = {
     ownerName === undefined
       ? `좋은 아침이에요. ${date} 브리핑이에요.`
       : `좋은 아침이에요, ${ownerName}님. ${date} 브리핑이에요.`,
+  closing: (first) => (first !== undefined ? `오늘은 ${first}부터 챙기면 돼요. 무엇부터 도와드릴까요?` : '오늘은 급한 일이 없어 보여요. 도와드릴 게 있으면 말씀해 주세요.'),
   date: (month, day, weekday) => `${month}월 ${day}일 (${KO_WEEKDAYS[weekday]})`,
   titles: { calendar: '일정', mail: '중요 메일', todo: '할 일' },
   empty: {
@@ -104,6 +107,7 @@ const EN: BriefingTexts = {
     ownerName === undefined
       ? `Good morning. Here is your briefing for ${date}.`
       : `Good morning, ${ownerName}. Here is your briefing for ${date}.`,
+  closing: (first) => (first !== undefined ? `Start with ${first}. What should I help with first?` : 'Nothing urgent today. Tell me if you need anything.'),
   date: (month, day, weekday) => `${EN_WEEKDAYS[weekday]}, ${EN_MONTHS[month - 1] ?? ''} ${day}`,
   titles: { calendar: 'Schedule', mail: 'Important mail', todo: 'To-do' },
   empty: {

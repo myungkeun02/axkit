@@ -92,14 +92,20 @@ export function knowledgeReadTool(deps: { builder: KnowledgeBuilder }): Tool<Kno
     input: readInput,
     effects: ['read'],
     async run(input) {
-      const markdown = deps.builder.document(input.doc);
+      // a name said loosely ("sales-team 운영", "Profile") still finds its document
+      const names = deps.builder.docNames();
+      const wanted = input.doc.trim().toLowerCase();
+      const exact = names.find((name) => name.toLowerCase() === wanted);
+      const loose = exact ?? names.filter((name) => wanted.startsWith(name.toLowerCase()) || name.toLowerCase().startsWith(wanted)).sort((a, b) => b.length - a.length)[0];
+      const doc = loose ?? input.doc;
+      const markdown = deps.builder.document(doc);
       if (markdown === undefined) {
-        const names = deps.builder.docNames().slice(0, NAME_LIMIT);
+        const shown = names.slice(0, NAME_LIMIT);
         throw new Error(
-          `Unknown knowledge document: ${input.doc}. Available: ${names.length > 0 ? names.join(', ') : 'none'}`,
+          `Unknown knowledge document: ${input.doc}. Available: ${shown.length > 0 ? shown.join(', ') : 'none'}`,
         );
       }
-      return { doc: input.doc, markdown: markdown.slice(0, READ_LIMIT) };
+      return { doc, markdown: markdown.slice(0, READ_LIMIT) };
     },
   };
 }

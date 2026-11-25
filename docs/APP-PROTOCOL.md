@@ -917,3 +917,10 @@ Ctrl+C나, 5분 넘게 남았을 때 한 번 묻는 "백그라운드로 두고 �
   `views/team-plan`은 그대로 있음(옛 앱용). 앱은 plan이 없거나 `status`가 `applied`·`declined`면 "팀 구조" 메뉴를 숨기면 됨.
 - (§37 추가) `POST views/bots/createTeamFromText {text, group?}` → `{teamId, channel, group, name, purpose, members:[{id,name,role}], briefKept}`: 오너가 한 번에 적은 설명(할 일·사람·말투·채널·일정·규칙)으로 팀을 만든다. 모델이 이름·목적·역할(2~6명)과 안내문을 뽑고, 안내문은 팀장의 오너 지시로 들어감(AI가 덮지 않음). 대화에서는 도구 `bots.create_team`이 같은 일을 한다.
 - (§37 추가) `POST share`에 헤더 `x-channel: <팀·봇 방 channel>`을 주면 그 방에 들어감(없는 방은 400). 서버가 이걸 알면 `capabilities.features`에 `share-rooms`가 있음 — 없으면 옛 맥이라 방에서는 첨부를 숨길 것.
+
+## 38. blocks 화면의 줄 이동 + 드라이브 폴더 (2026-11-25)
+
+- **새 필드 `rows[].query`**(선택, 모든 blocks 화면): 그 줄을 누르면 앱이 같은 화면을 `GET views/<name>?<query>`로 다시 읽어 바꿔 보여 준다(폴더 열기처럼). 빈 객체 `{}`는 처음 화면. 앱은 뒤로 가기용으로 앞의 query들을 쌓아 두면 좋다. `message`와 같이 오면 `query`가 먼저.
+- 드라이브(§34): 맨 위 줄 "📁 폴더로 보기"(`query: {mode:"tree"}`). 계정이 여럿이면 계정 → "내 드라이브 / 공유 문서함" → 폴더·파일. 폴더 줄은 `query {mode, source, folder, path}`, 파일 줄은 `message`(요약·지식 문서 반영). 첫 `text` 블록이 경로("📁 내 드라이브 › 기획").
+- (§38 추가) 새 blocks 화면 `views/mail`(제목 "메일", 기능 `mail-screen`): 최근 3일 비서가 읽은 메일 — "먼저 보실 메일"(중요), "알아 두면 좋은 메일", "답을 기다리는 메일". 줄마다 `detail`(종류 · 누가 무엇을), `message`(누르면 "이 메일 어떻게 할지" 대화). 광고·알림은 개수만.
+- (§37 추가) `POST views/bots/deleteTeam {teamId, confirm: true}` → `{teamId, name, removedBots}`: 팀과 팀원 봇을 지운다(방의 지난 대화는 기록에 남음). 앱은 "정말 지울까요? 팀원 N명도 같이 지워져요"를 먼저 묻고 `confirm: true`를 보낼 것. 없으면 400.

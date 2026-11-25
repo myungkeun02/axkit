@@ -185,6 +185,19 @@ export class GoogleDriveFiles implements FileSource {
     return url.toString();
   }
 
+  async children(folderId = 'root'): Promise<{ folders: { id: string; name: string }[]; files: FileEntry[] }> {
+    const shared = folderId === 'shared';
+    if (!shared && folderId !== 'root' && !FOLDER_ID.test(folderId)) return { folders: [], files: [] };
+    const where = shared ? 'sharedWithMe = true' : `'${folderId}' in parents`;
+    const items = await this.query(`${where} and trashed = false`, { pageSize: 200, maxPages: 3, orderBy: 'folder,name' });
+    const folders = items.filter((item) => item.mimeType === FOLDER_MIME && FOLDER_ID.test(item.id)).map((item) => ({ id: item.id, name: item.name }));
+    const files = items
+      .filter((item) => item.mimeType !== FOLDER_MIME)
+      .map((item) => this.toEntry(item, shared ? 'Drive/공유 문서함' : 'Drive', undefined))
+      .filter((entry): entry is FileEntry => entry !== undefined);
+    return { folders, files };
+  }
+
   private async walk(
     folderId: string,
     pathPrefix: string,

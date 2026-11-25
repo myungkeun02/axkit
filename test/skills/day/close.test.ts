@@ -87,7 +87,7 @@ describe('day.close', () => {
     expect(notice?.dedupeKey).toBe('2026-11-17');
 
     const text = notice?.text ?? '';
-    expect(text).toContain('오늘 마감');
+    expect(text).toContain('오늘 하루 정리해 봤어요.');
     expect(text).toContain('일정 2개');
     expect(text).toContain('할 일 1개 완료');
     expect(text).toContain('남은 할 일');
@@ -122,7 +122,7 @@ describe('day.close', () => {
     await scheduler.run('day.close', NOW);
 
     expect(notifier.notices).toHaveLength(1);
-    expect(notifier.notices[0]?.text).toBe('오늘 마감');
+    expect(notifier.notices[0]?.text).toBe('오늘 하루 정리해 봤어요.');
   });
 
   it('omits the steps line when the phone has no data', async () => {

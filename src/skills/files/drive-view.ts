@@ -2,6 +2,7 @@ import type { AppView } from '../../core/contracts/device-api.js';
 import type { FileEntry, FileSource } from '../../core/contracts/files.js';
 import type { Clock } from '../../core/scheduler/types.js';
 import { clockTime, dayOf, folderOf } from './change-view.js';
+import { treeBlocks } from './drive-tree.js';
 
 const DAY_MS = 86_400_000;
 const VIEW_DAYS = 30;
@@ -29,8 +30,14 @@ export function driveView(deps: { sources: () => readonly FileSource[]; clock: C
     ui: 'blocks',
     title: '드라이브',
     icon: 'externaldrive',
-    async read() {
+    async read(query) {
       const now = deps.clock.now();
+      const params = Object.fromEntries(query ?? new URLSearchParams()) as Record<string, string>;
+      // the folder tree, one folder at a time (rows carry the next `query`)
+      if (params.mode === 'tree') {
+        const tree = await treeBlocks(deps.sources().filter(isDriveSource), { ...(params.source !== undefined ? { source: params.source } : {}), ...(params.folder !== undefined ? { folder: params.folder } : {}), ...(params.path !== undefined ? { path: params.path } : {}) }, deps.timeZone).catch(() => [{ kind: 'text', text: '드라이브 폴더를 지금 읽지 못했어요. 잠시 뒤 다시 열어 주세요.' }]);
+        return { title: '드라이브', blocks: tree };
+      }
       if (cached !== undefined && now.getTime() - cached.at < CACHE_MS) return cached.value;
       const sources = deps.sources().filter(isDriveSource);
       const multi = sources.length > 1;
@@ -54,6 +61,7 @@ export function driveView(deps: { sources: () => readonly FileSource[]; clock: C
         blocks.push({ kind: 'text', text: '구글 드라이브가 연결돼 있지 않아요.' }, { kind: 'note', text: '맥에서 `ax-kit connect google`로 연결하고 드라이브를 켜 주세요.' });
         return { title: '드라이브', blocks };
       }
+      blocks.push({ kind: 'list', rows: [{ title: '📁 폴더로 보기', detail: '내 드라이브·공유 문서함을 폴더별로', query: { mode: 'tree' } }] });
       blocks.push({ kind: 'stat', title: `최근 ${VIEW_DAYS}일 동안 바뀐 내 파일`, value: `${found.length >= MAX_ROWS ? `${MAX_ROWS}건 넘게` : `${found.length}건`}` });
       const days = new Map<string, { label: string; items: Found[] }>();
       for (const item of shown) {

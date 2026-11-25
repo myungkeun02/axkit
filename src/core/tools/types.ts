@@ -57,6 +57,8 @@ export interface Tool<I = unknown, O = unknown> {
   images?(input: I): readonly OutgoingImage[] | undefined;
   /** Run time limit for slow tools; the executor's default otherwise (capped at three hours). */
   timeoutMs?: number;
+  /** False while what it needs is missing (no browser agent yet): the model is then not offered it at all. */
+  available?(): boolean;
   run(input: I, ctx: ToolRunContext): Promise<O>;
 }
 

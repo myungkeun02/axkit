@@ -187,6 +187,25 @@ export class FirstLookFlow {
     }
   }
 
+  /** Starts the first look when it never ran, or ran before Google was connected (no Drive files read then). */
+  async autoStart(): Promise<void> {
+    const { ctx, korean } = this.deps;
+    const reader = ctx.tryUse(Contracts.firstLook);
+    if (reader === undefined) return;
+    const progress = reader.progress();
+    if (progress.status === 'running' || progress.status === 'paused') return;
+    const google = ctx.tryUse(Contracts.filesDrive) !== undefined || ctx.tryUse(Contracts.mailRead) !== undefined;
+    const never = progress.status === 'idle' && progress.startedAt === null;
+    const withoutGoogle = progress.status === 'done' && google && (progress.counts.drive ?? 0) === 0 && (await ctx.kv.get<boolean>(AUTO_GOOGLE_KEY)) !== true;
+    if (!never && !withoutGoogle) return;
+    if (withoutGoogle) await ctx.kv.set(AUTO_GOOGLE_KEY, true);
+    if (reader.start() !== 'started') return;
+    const text = korean
+      ? withoutGoogle ? '구글이 연결돼서 드라이브와 메일까지 다시 알아보기 시작했어요. 끝나면 사람·팀·루틴을 정리해서 보여 드릴게요.' : '처음 알아보기를 시작했어요. 문서와 메일을 읽고 사람·팀·루틴을 정리해서 보여 드릴게요.'
+      : withoutGoogle ? 'Google is connected, so I started reading Drive and mail too.' : 'I started the first look.';
+    await ctx.tryUse(Contracts.notifier)?.notify({ kind: 'onboarding.progress', text, dedupeKey: `first-look-auto:${withoutGoogle ? 'google' : 'first'}` }).catch(() => undefined);
+  }
+
   /** `tool`: offer `bots.revise_plan` in chat (only where bots can be built at all). */
   register(opts: { tool: boolean }): void {
     const { ctx, korean } = this.deps;
@@ -194,6 +213,8 @@ export class FirstLookFlow {
       await ctx.kv.set(MEMO_KEY, memoFromScan(scan.profile));
     });
     if (opts.tool) ctx.registerTool(reviseTool(this, korean));
+    // the first look starts on its own: once after setup, and again once when Google (Drive, mail) gets connected later
+    ctx.scheduler.add({ name: 'assistant.first-look-auto', label: korean ? '처음 알아보기 자동 시작' : 'First look auto start', schedule: { kind: 'every', seconds: 1800 }, run: () => this.autoStart() });
     ctx.bus.on('app.started', () => {
       const views = ctx.tryUse(Contracts.appViews);
       if (views === undefined) return;
@@ -219,6 +240,8 @@ export class FirstLookFlow {
     });
   }
 }
+
+const AUTO_GOOGLE_KEY = 'first-look.auto-google';
 
 const reviseInput = z.object({ instruction: z.string().min(1).max(MAX_WORDS).describe("The owner's correction in their own words, e.g. \"에이컴퍼니랑 베타랩은 따로야. 쇼핑몰 앱은 베타랩 아래\".") });
 

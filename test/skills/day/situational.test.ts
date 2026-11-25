@@ -55,7 +55,7 @@ describe('day.close with situational judgment', () => {
     const { notifier, scheduler } = await closeSetup(llm, false);
     await scheduler.run('day.close', CLOSE_AT);
     expect(llm.requests).toHaveLength(0);
-    expect(notifier.notices[0]?.text).toContain('오늘 마감');
+    expect(notifier.notices[0]?.text).toContain('오늘 하루 정리해 봤어요.');
   });
 
   it('puts the judged line above the card', async () => {
@@ -64,7 +64,7 @@ describe('day.close with situational judgment', () => {
     await scheduler.run('day.close', CLOSE_AT);
     expect(llm.requests[0]?.tier).toBe('fast');
     expect(llm.requests[0]?.jsonSchema).toBeDefined();
-    expect(notifier.notices[0]?.text.startsWith('보고서 마감이 오늘이에요.\n\n오늘 마감')).toBe(true);
+    expect(notifier.notices[0]?.text.startsWith('보고서 마감이 오늘이에요.\n\n오늘 하루 정리해 봤어요.')).toBe(true);
   });
 
   it('stays silent when the model says there is nothing', async () => {
@@ -78,7 +78,7 @@ describe('day.close with situational judgment', () => {
     const llm = new ScriptedLlm(['garbage']);
     const { notifier, scheduler } = await closeSetup(llm, true);
     await scheduler.run('day.close', CLOSE_AT);
-    expect(notifier.notices[0]?.text.startsWith('오늘 마감')).toBe(true);
+    expect(notifier.notices[0]?.text.startsWith('오늘 하루 정리해 봤어요.')).toBe(true);
   });
 });
 

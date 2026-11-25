@@ -84,6 +84,7 @@ export function wayTools(deps: WaysDeps): Tool[] {
     input: lookInput,
     effects: ['read'],
     timeoutMs: 12 * 60_000,
+    available: () => deps.agent() !== undefined,
     describe: (value) => `웹에서 보기: ${value.task}${value.site !== undefined ? ` (${value.site})` : ''}`,
     run: async (value) => await runWeb(deps, 'look', value),
   };
@@ -94,6 +95,7 @@ export function wayTools(deps: WaysDeps): Tool[] {
     effects: ['write'],
     effectsFor: (value): readonly Effect[] => [...(SENDING.test(value.task) ? (['send'] as const) : []), ...(BUYING.test(value.task) ? (['pay'] as const) : []), 'send'],
     timeoutMs: 32 * 60_000,
+    available: () => deps.agent() !== undefined,
     describe: (value) => `웹에서 하기: ${value.task}${value.site !== undefined ? ` (${value.site})` : ''}`,
     run: async (value) => await runWeb(deps, 'do', value),
   };

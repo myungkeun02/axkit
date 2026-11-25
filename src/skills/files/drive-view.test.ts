@@ -31,7 +31,7 @@ describe('drive view', () => {
       timeZone: 'Asia/Seoul',
     });
     const { blocks } = (await view.read(new URLSearchParams())) as { blocks: Blocks };
-    const lists = blocks.filter((block) => block.kind === 'list');
+    const lists = blocks.filter((block) => block.kind === 'list' && block.title !== undefined);
     expect(lists.map((list) => list.title)).toEqual(['오늘 · 1건', '어제 · 1건']);
     expect(lists[0]?.rows?.[0]).toMatchObject({ title: 'budget.xlsx', detail: 'Drive/Plans · work@y.test' });
     expect(lists[1]?.rows?.[0]?.message).toContain('plan.gdoc');

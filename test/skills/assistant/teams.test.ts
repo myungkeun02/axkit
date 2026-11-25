@@ -69,6 +69,13 @@ describe('bot teams, team rooms and lead meetings (R16, R17)', () => {
       expect(after?.teams?.find((t) => t.id === 'team-app')?.members).toContain('sales-s2');
       expect(after?.bots.find((b) => b.id === 'sales-s1')?.name).toBe('김영업');
 
+      // deleting a team needs confirm: true, and takes its members with it
+      expect((await api(h, token, 'views/bots/deleteTeam', { teamId: 'team-sales' })).status).toBe(400);
+      const gone = (await (await api(h, token, 'views/bots/deleteTeam', { teamId: 'team-sales', confirm: true })).json()) as { data: { removedBots: number } };
+      expect(gone.data.removedBots).toBeGreaterThan(0);
+      const left = (await (await api(h, token, 'views/bots')).json()) as { data: { groups: { id: string; teams?: { id: string }[] }[] } };
+      expect(left.data.groups.find((g) => g.id === 'hanbit-lab')?.teams?.map((t) => t.id)).not.toContain('team-sales');
+
       expect((await api(h, token, 'views/bots/setTiers', { teamId: 'team-app', tiers: { lead: 'S' } })).status).toBe(200);
       const tiers = (await (await api(h, token, 'views/modeltiers')).json()) as { data: { purposes: { id: string; tier: string; chosen: boolean }[] } };
       expect(tiers.data.purposes.find((p) => p.id === 'bot.app-lead')).toMatchObject({ tier: 'S', chosen: true });

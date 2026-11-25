@@ -1,3 +1,4 @@
+import { Contracts } from '../../core/contracts/index.js';
 import type { Plugin } from '../../core/plugin/types.js';
 import { registerClose } from './close.js';
 import { healthSettings, readDayConfig } from './config.js';
@@ -9,6 +10,7 @@ import { registerReplies } from './replies.js';
 import { registerTravel } from './travel.js';
 import { registerMeetLinks } from './meet-reminder.js';
 import { registerTransit } from './transit-job.js';
+import { connectionsCheck } from './connections.js';
 import { registerLunch } from './lunch.js';
 import { registerPlaces } from './places.js';
 import { registerVoice } from './voice.js';
@@ -32,6 +34,7 @@ export function daySkill(): Plugin {
       if (config.travel) registerTravel(ctx, config.travelBufferMinutes, texts);
       if (config.meetLinks) registerMeetLinks(ctx);
       if (config.transit) registerTransit(ctx);
+      ctx.tryUse(Contracts.health)?.register(connectionsCheck(ctx));
       if (config.places) {
         const known = registerPlaces(ctx);
         if (config.lunch) registerLunch(ctx, known);

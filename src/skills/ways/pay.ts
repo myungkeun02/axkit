@@ -50,6 +50,7 @@ export function payTool(deps: WaysDeps, carts: PendingCarts): Tool<z.infer<typeo
     description: 'Pay for the cart web.do stopped at (stopped: "payment"), with the site, and the exact total from its cart. The owner approves the amount on a card first.',
     input: payInput,
     effects: ['pay'],
+    available: () => deps.agent() !== undefined,
     timeoutMs: 15 * 60_000,
     describe,
     async run(value) {

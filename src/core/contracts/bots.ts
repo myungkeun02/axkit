@@ -90,6 +90,8 @@ export interface BotDirectory {
   setStatus(id: string, status: BotStatus, text?: string): Promise<void>;
   teams(): Promise<BotTeam[]>;
   upsertTeam(team: BotTeam): Promise<void>;
+  /** Removes a team and its members (their rooms' past messages stay in the log). False when there is no such team. */
+  removeTeam?(id: string): Promise<boolean>;
   setInstructions(id: string, text: string, by: 'default' | 'ai' | 'owner'): Promise<void>;
 }
 

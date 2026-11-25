@@ -8,6 +8,7 @@ import { mailArchiveTool, mailLabelTool, mailLabelsTool } from './tools-organize
 import { mailDraftTool, mailReadTool, mailSearchTool, mailSendTool } from './tools.js';
 import { readTriageConfig } from './triage-config.js';
 import { registerTriage } from './triage-job.js';
+import { mailView, rememberTriaged } from './mail-view.js';
 import { triageTexts } from './triage-locale.js';
 import { qualityTools, registerQuality, registerQualityView } from './quality.js';
 
@@ -48,6 +49,13 @@ export function mailSkill(): Plugin {
       };
       ctx.provide(Contracts.mailIntents, registry);
       registerTriage(ctx, readTriageConfig(ctx), registry);
+      rememberTriaged(ctx);
+      ctx.bus.on('app.started', () => {
+        const views = ctx.tryUse(Contracts.appViews);
+        if (views === undefined) return;
+        views.register(mailView(ctx));
+        views.addFeature?.('mail-screen');
+      });
       // R: learn from what the owner did with the drafts (style guide, outcomes, local test set)
       registerQuality(ctx);
       registerQualityView(ctx);

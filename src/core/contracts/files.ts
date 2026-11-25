@@ -38,6 +38,11 @@ export interface FileSource {
    * told (its folder is not reachable right now), so a caller never drops a file it merely could not see.
    */
   entry?(id: string): Promise<FileEntry | undefined>;
+  /**
+   * One folder's subfolders and files, for browsing like a file manager (Drive: "root" when no folder is given, and
+   * the "shared with me" files under the id "shared"). Sources without folders leave it out.
+   */
+  children?(folderId?: string): Promise<{ folders: { id: string; name: string }[]; files: FileEntry[] }>;
   /** Live change tracking over the configured folders. Rejects when no folder could be watched. */
   watch?(listener: (changes: readonly FileChange[]) => void | Promise<void>): Promise<FileWatch>;
 }

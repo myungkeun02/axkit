@@ -94,7 +94,7 @@ describe('day.prep', () => {
     expect(notice?.dedupeKey).toBe('2026-11-18');
 
     const text = notice?.text ?? '';
-    expect(text).toContain('내일 준비');
+    expect(text).toContain('내일 일정을 미리 봤어요');
     expect(text).toContain('09:00 팀 회의 @본관 3층');
     expect(text).toContain('장소 확인');
     expect(text).toContain('12:00 점심 약속');

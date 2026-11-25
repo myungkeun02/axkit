@@ -5,6 +5,7 @@ import { ViewInputError } from '../../../core/contracts/device-api.js';
 const name = z.string().trim().min(1).max(40);
 const renameTeamSchema = z.object({ teamId: z.string().min(1).max(80), name, purpose: z.string().trim().max(200).optional() });
 const editBotSchema = z.object({ botId: z.string().min(1).max(80), name: name.optional(), role: z.string().trim().min(2).max(120).optional() });
+const deleteTeamSchema = z.object({ teamId: z.string().min(1).max(80), confirm: z.literal(true) });
 const moveBotSchema = z.object({ botId: z.string().min(1).max(80), teamId: z.string().min(1).max(80) });
 
 function botInput(bot: Bot, patch: Partial<Bot>): Parameters<BotDirectory['upsert']>[0] {
@@ -36,6 +37,17 @@ export function botEditActions(directory: BotDirectory, korean: boolean, ownerIn
       if (bot === undefined) throw ownerInputError(korean ? '그런 봇이 없어요' : 'No such bot');
       const saved = await directory.upsert(botInput(bot, { ...(parsed.data.name !== undefined ? { name: parsed.data.name } : {}), ...(parsed.data.role !== undefined ? { role: parsed.data.role } : {}) }));
       return { botId: saved.id, name: saved.name, role: saved.role };
+    },
+    /** Deletes a team and its members. The app asks "정말 지울까요?" first and sends `confirm: true`. */
+    async deleteTeam(body) {
+      const parsed = deleteTeamSchema.safeParse(body);
+      if (!parsed.success) throw new ViewInputError('deleteTeam needs {teamId, confirm: true}');
+      if (directory.removeTeam === undefined) throw ownerInputError(korean ? '이 맥에서는 팀을 지울 수 없어요.' : 'Teams cannot be deleted here.');
+      const team = (await directory.teams()).find((item) => item.id === parsed.data.teamId);
+      if (team === undefined) throw ownerInputError(korean ? '그런 팀이 없어요' : 'No such team');
+      const members = (await directory.list()).filter((bot) => bot.team === team.id).length;
+      await directory.removeTeam(team.id);
+      return { teamId: team.id, name: team.name, removedBots: members };
     },
     async moveBot(body) {
       const parsed = moveBotSchema.safeParse(body);

@@ -91,6 +91,16 @@ function choicesFor(data: BriefingData, texts: BriefingTexts): Choice[] {
 }
 
 /** Turns gathered data into the owner-facing message. Pure: no clock, no network. */
+/** What to look at first: an overdue to-do, else the first timed event, else an important mail. */
+function firstThing(data: BriefingData, texts: BriefingTexts, timeZone: string): string | undefined {
+  const overdue = data.todo.state === 'ok' ? data.todo.items.find((item) => item.overdue) : undefined;
+  if (overdue !== undefined) return `'${overdue.text}'`;
+  const event = data.calendar.state === 'ok' ? data.calendar.items.find((item) => !item.allDay) : undefined;
+  if (event !== undefined) return `${clockTime(event.start, timeZone) ?? ''} '${event.title}'`.trim();
+  const mail = data.mail.state === 'ok' ? data.mail.items[0] : undefined;
+  return mail !== undefined ? `${mail.from}님 메일` : undefined;
+}
+
 export function renderBriefing(data: BriefingData, opts: RenderOptions): OutgoingMessage {
   const { texts, timeZone } = opts;
   const greeting = texts.greeting(opts.ownerName, texts.date(data.date.month, data.date.day, data.date.weekday));
@@ -110,6 +120,7 @@ export function renderBriefing(data: BriefingData, opts: RenderOptions): Outgoin
     block(texts.titles.calendar, calendar),
     block(texts.titles.mail, mail),
     block(texts.titles.todo, todo),
+    texts.closing(firstThing(data, texts, timeZone)),
   ].join('\n\n');
 
   const choices = choicesFor(data, texts);

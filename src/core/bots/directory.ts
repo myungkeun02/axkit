@@ -100,6 +100,16 @@ export class KvBotDirectory implements BotDirectory {
     await this.kv.set('state', stored);
   }
 
+  async removeTeam(id: string): Promise<boolean> {
+    const stored = await this.load();
+    const teams = stored.teams ?? [];
+    if (!teams.some((team) => team.id === id)) return false;
+    stored.teams = teams.filter((team) => team.id !== id);
+    stored.bots = stored.bots.filter((bot) => bot.team !== id);
+    await this.kv.set('state', stored);
+    return true;
+  }
+
   private async load(): Promise<Stored> {
     const stored = await this.kv.get<Stored>('state');
     return { bots: stored?.bots ?? [], groups: stored?.groups ?? [], teams: stored?.teams ?? [] };
