@@ -29,6 +29,37 @@ const SENSITIVE_DIRS = new Set([
   '.password-store',
 ]);
 
+/**
+ * App data, caches and package stores: never the owner's own documents, and huge. Skipped so a scan of the whole
+ * home folder stays on what people wrote.
+ */
+const HEAVY_DIRS = new Set([
+  'library',
+  'applications',
+  '.cache',
+  '.npm',
+  '.pnpm-store',
+  '.yarn',
+  '.cargo',
+  '.rustup',
+  '.gradle',
+  '.m2',
+  '.android',
+  '.cocoapods',
+  'deriveddata',
+  '.venv',
+  'venv',
+  '__pycache__',
+  '.local',
+  '.vscode',
+  '.cursor',
+  '.ollama',
+  'pods',
+  'build',
+  'dist',
+  '.next',
+]);
+
 const SENSITIVE_NAMES: readonly RegExp[] = [
   /^\.env(\..*)?$/i,
   /\.(pem|key|p12|pfx|kdbx|keychain(-db)?|ovpn|gpg|asc|jks)$/i,
@@ -46,7 +77,7 @@ export function extensionOf(name: string): string {
 /** True when any part of the path looks like it holds keys, passwords or identity documents. */
 export function isSensitivePath(path: string, extra: readonly string[] = []): boolean {
   const parts = path.split(/[\\/]+/).filter((part) => part !== '');
-  if (parts.some((part) => SENSITIVE_DIRS.has(part.toLowerCase()))) return true;
+  if (parts.some((part) => SENSITIVE_DIRS.has(part.toLowerCase()) || HEAVY_DIRS.has(part.toLowerCase()) || part.toLowerCase().endsWith('.photoslibrary'))) return true;
   const name = parts.at(-1) ?? '';
   if (SENSITIVE_NAMES.some((rule) => rule.test(name))) return true;
   const lower = path.toLowerCase();

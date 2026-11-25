@@ -20,7 +20,8 @@
    비서 맥에서 `ax-kit remote install`을 실행하면 그 맥에 붙여 넣을 한 줄이 나와요 (또는 git clone https://github.com/myungkeun02/axkit.git ~/ax-kit && AX_KIT_NO_SETUP=1 bash ~/ax-kit/install.sh)
    ```
 
-2. 보여 줄 폴더를 골라요. 제안된 폴더 중에서 뺄 번호를 적고, 필요한 폴더는 직접 입력해요.
+2. 보여 줄 범위를 골라요. 기본은 **모든 파일(홈 폴더 전체)**이에요. 키·비밀번호·.env처럼 보이는 파일과 앱 데이터·캐시
+   (~/Library 등)는 그래도 열지 않아요. "폴더만 고르기"를 고르면 폴더를 직접 정할 수 있어요.
    Claude Code·Codex 대화 기록을 보여 줄지도 물어요.
 
    ```

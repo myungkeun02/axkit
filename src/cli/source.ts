@@ -39,6 +39,15 @@ function numbers(value: string, max: number): number[] | undefined {
 /** The folder checklist: suggestions that exist (and earlier picks), numbers to leave out, then paths typed in. */
 async function askSharedFolders(deps: SourceSetupDeps, previous: readonly string[]): Promise<string[]> {
   const { prompter, home } = deps;
+  const scope = await prompter.choose(
+    '이 맥의 어디까지 보여 줄까요?',
+    [
+      { value: 'all', label: '모든 파일 (홈 폴더 전체, 추천)', hint: '키·비밀번호·.env·.ssh처럼 보이는 파일은 그래도 열지 않아요.' },
+      { value: 'pick', label: '폴더만 고르기' },
+    ],
+    previous.length > 0 && !previous.includes('~') ? 1 : 0,
+  );
+  if (scope === 'all') return ['~'];
   const offered = [...previous];
   for (const name of CANDIDATES) {
     const path = `~/${name}`;
@@ -63,10 +72,6 @@ async function askSharedFolders(deps: SourceSetupDeps, previous: readonly string
       prompter.say(`건너뛸게요(절대 경로나 ~/로 적어 주세요): ${raw}`);
       continue;
     }
-    if (absolute === home) {
-      prompter.say('홈 폴더 전체는 너무 넓어요. 그 안의 폴더를 골라 주세요.');
-      continue;
-    }
     if (!(await deps.dirExists(absolute))) {
       prompter.say(`폴더를 찾지 못해 건너뛸게요: ${raw}`);
       continue;
@@ -81,7 +86,7 @@ async function askSharedFolders(deps: SourceSetupDeps, previous: readonly string
 export async function runSourceSetup(deps: SourceSetupDeps): Promise<SourceConfig> {
   const { prompter } = deps;
   const previous = await readSourceConfig(deps.sourceHome);
-  prompter.say('이 맥의 파일을 다른 맥에 있는 비서가 읽을 수 있게 해요 (읽기만, 고른 폴더 안만).');
+  prompter.say('이 맥의 파일을 다른 맥에 있는 비서가 읽을 수 있게 해요 (읽기만).');
   prompter.say('- 키·비밀번호·.env·.ssh·여권·통장처럼 보이는 이름은 열지 않아요. 아무것도 바꾸거나 지우지 않아요.');
   prompter.say('- 연결은 Tailscale(내 기기끼리만 통하는 암호화된 망) 안에서만, 짝지은 맥만 할 수 있어요.');
   const folders = await askSharedFolders(deps, previous?.folders ?? []);

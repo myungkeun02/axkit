@@ -50,7 +50,7 @@ describe('setup funnel', () => {
         '1', // 3/7 대화할 곳: app
         '2', // 4/7 Google: later
         '', '', // 5/7 briefing 08:00, quiet 23–07 (defaults)
-        '1', '', '', // 6/7 first look now, folders as offered, sources as offered
+        '1', '', '', // 6/7 first look now, every file (the default), sources as offered
         '', // 7/7 마무리: 이대로 저장
         '1', // service
       ],
@@ -77,7 +77,7 @@ describe('setup funnel', () => {
     expect(config.assistant.language).toBe('ko');
     expect(config.assistant.timezone).toBe('Asia/Seoul');
     expect(config.plugins['skill.briefing']).toEqual({ enabled: true, at: '08:00' });
-    expect(config.plugins['skill.onboarding']).toMatchObject({ enabled: true, autoStart: true, folders: ['~/Documents'], signals: true });
+    expect(config.plugins['skill.onboarding']).toMatchObject({ enabled: true, autoStart: true, folders: ['~'], signals: true });
     expect(config.plugins['skill.talent']).toBeUndefined();
     expect(config.plugins['connector.kakao-desktop']).toBeUndefined();
   });

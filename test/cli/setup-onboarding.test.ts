@@ -11,7 +11,7 @@ const dirExists = async (path: string): Promise<boolean> => EXISTING.has(path);
 describe('askOnboarding', () => {
   it('offers only folders that exist, drops the ones the owner removes and adds typed ones', async () => {
     // now; keep 1 and 3 of the offered folders and type two more; Drive and recent activity as checked
-    const prompter = createScriptedPrompter(['1', '1,3,+/Volumes/work,+~/missing', '']);
+    const prompter = createScriptedPrompter(['1', '2', '1,3,+/Volumes/work,+~/missing', '']);
 
     const entry = await askOnboarding({ prompter, home: HOME, dirExists, driveConnected: true, now: () => NOW });
 
@@ -32,7 +32,7 @@ describe('askOnboarding', () => {
   });
 
   it('does not ask about Drive when Drive is not connected, and "later" keeps the scan from starting', async () => {
-    const prompter = createScriptedPrompter(['2', '', 'none']);
+    const prompter = createScriptedPrompter(['2', '2', '', 'none']);
 
     const entry = await askOnboarding({ prompter, home: HOME, dirExists, driveConnected: false, now: () => NOW });
 
@@ -56,10 +56,10 @@ describe('askOnboarding', () => {
 
   it('rejects numbers that are not in the list and typed folders that are not a path', async () => {
     await expect(
-      askOnboarding({ prompter: createScriptedPrompter(['1', '9']), home: HOME, dirExists, driveConnected: false, now: () => NOW }),
+      askOnboarding({ prompter: createScriptedPrompter(['1', '2', '9']), home: HOME, dirExists, driveConnected: false, now: () => NOW }),
     ).rejects.toThrow('목록에 있는 번호로');
     await expect(
-      askOnboarding({ prompter: createScriptedPrompter(['1', '+relative/path']), home: HOME, dirExists, driveConnected: false, now: () => NOW }),
+      askOnboarding({ prompter: createScriptedPrompter(['1', '2', '+relative/path']), home: HOME, dirExists, driveConnected: false, now: () => NOW }),
     ).rejects.toThrow('/ 또는 ~/로 시작하는 경로');
   });
 
@@ -68,7 +68,7 @@ describe('askOnboarding', () => {
       { path: '/Users/me/projects/app', display: '~/projects/app', name: 'app', company: '개인', lastActive: NOW.toISOString(), claude: 3, codex: 0, inFolders: true },
     ];
     // now, folders as offered, the project as checked (all personal: no question about companies), then turn the session logs off
-    const prompter = createScriptedPrompter(['1', '', '', '2,3']);
+    const prompter = createScriptedPrompter(['1', '2', '', '', '2,3']);
     const entry = await askOnboarding({ prompter, home: HOME, dirExists, driveConnected: true, now: () => NOW, discover });
     expect(entry).toMatchObject({ sessions: false, drive: true, signals: true, projects: [{ path: '/Users/me/projects/app', name: 'app', company: '개인' }] });
     expect(prompter.remaining()).toBe(0);

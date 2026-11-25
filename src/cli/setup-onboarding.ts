@@ -57,6 +57,16 @@ function expand(raw: string, home: string): string {
 /** The usual folders that exist (checked), plus any folder path the owner types in. */
 async function askFolders(deps: OnboardingStepDeps): Promise<string[]> {
   const { prompter, home } = deps;
+  // every file is the default: the whole home folder (key, password, .env and the like are still never opened)
+  const scope = await prompter.choose(
+    '어디까지 볼까요?',
+    [
+      { value: 'all', label: '모든 파일 (홈 폴더 전체, 추천)', hint: '키·비밀번호·.env처럼 보이는 파일은 그래도 열지 않아요.' },
+      { value: 'pick', label: '폴더만 고르기' },
+    ],
+    0,
+  );
+  if (scope === 'all') return ['~'];
   const previous = deps.existing?.plugins[ONBOARDING_ID]?.['folders'];
   const offered: string[] = [];
   if (Array.isArray(previous)) offered.push(...previous.filter((item): item is string => typeof item === 'string'));
