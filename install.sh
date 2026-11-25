@@ -46,10 +46,20 @@ if [ "$(readlink "$BIN_DIR/ax-kit" 2>/dev/null)" != "$DIR/bin/ax-kit.mjs" ]; the
   ln -sf "$DIR/bin/ax-kit.mjs" "$BIN_DIR/ax-kit"
   say "ax-kit 명령 연결: $BIN_DIR/ax-kit"
 fi
-case ":$PATH:" in *":$BIN_DIR:"*) ;; *) say "PATH에 $BIN_DIR 를 추가해 주세요 (~/.zprofile)";; esac
+# this script found Homebrew itself; a new terminal only does if ~/.zprofile says so — make sure it does
+PROFILE="$HOME/.zprofile"
+if [ "$BIN_DIR" = "$(brew --prefix)/bin" ]; then
+  LINE="eval \"\$($(brew --prefix)/bin/brew shellenv)\""
+else
+  LINE="export PATH=\"$BIN_DIR:\$PATH\""
+fi
+if ! grep -qsF "$LINE" "$PROFILE"; then
+  printf '\n# ax-kit: the ax-kit command\n%s\n' "$LINE" >> "$PROFILE"
+  say "새 터미널에서도 ax-kit이 되게 $PROFILE 에 추가했어요. 지금 창에서는: source $PROFILE"
+fi
 
 # A work Mac that only shares its files with the assistant's Mac (docs/guides/remote-sources.md) skips the setup.
-if [ "${AX_KIT_NO_SETUP:-}" = "1" ]; then say "설치 끝. 다음: ax-kit source setup"; exit 0; fi
+if [ "${AX_KIT_NO_SETUP:-}" = "1" ]; then say "설치 끝. 새 터미널을 열고(또는 source $PROFILE) 다음: ax-kit source setup"; exit 0; fi
 
 say "설정 시작 (이미 한 단계는 건너뛰어요)"
 exec "$DIR/bin/ax-kit.mjs" setup
