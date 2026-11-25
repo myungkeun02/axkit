@@ -916,3 +916,4 @@ Ctrl+C나, 5분 넘게 남았을 때 한 번 묻는 "백그라운드로 두고 �
 - 팀 구조 제안 카드의 버튼이 "이대로 만들기 / 나중에 / 만들지 않기"로 바뀜("앱에서 고칠게요" 없음). 만든 뒤 고치는 곳은 봇 화면.
   `views/team-plan`은 그대로 있음(옛 앱용). 앱은 plan이 없거나 `status`가 `applied`·`declined`면 "팀 구조" 메뉴를 숨기면 됨.
 - (§37 추가) `POST views/bots/createTeamFromText {text, group?}` → `{teamId, channel, group, name, purpose, members:[{id,name,role}], briefKept}`: 오너가 한 번에 적은 설명(할 일·사람·말투·채널·일정·규칙)으로 팀을 만든다. 모델이 이름·목적·역할(2~6명)과 안내문을 뽑고, 안내문은 팀장의 오너 지시로 들어감(AI가 덮지 않음). 대화에서는 도구 `bots.create_team`이 같은 일을 한다.
+- (§37 추가) `POST share`에 헤더 `x-channel: <팀·봇 방 channel>`을 주면 그 방에 들어감(없는 방은 400). 서버가 이걸 알면 `capabilities.features`에 `share-rooms`가 있음 — 없으면 옛 맥이라 방에서는 첨부를 숨길 것.

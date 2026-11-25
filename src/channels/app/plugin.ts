@@ -201,6 +201,8 @@ export function appChannel(opts: AppChannelOptions): Plugin {
         }
         views.addFeature('bots');
         views.addFeature('delegation');
+        // POST share takes x-channel: a file shared in a team or bot room lands there
+        if (opts.inboxDir !== undefined) views.addFeature('share-rooms');
       }
       ctx.bus.on('bots.message', async ({ bot, text, channel, to }) => {
         await log.append({ type: 'message', role: 'assistant', text, channel: channel ?? bot.id, author: bot, ...(to !== undefined ? { to } : {}) });
