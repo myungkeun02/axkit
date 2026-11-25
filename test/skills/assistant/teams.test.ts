@@ -3,6 +3,7 @@ import type { LlmProvider } from '../../../src/core/llm/types.js';
 import { KvBotDirectory } from '../../../src/core/bots/directory.js';
 import { teamsFromScan } from '../../../src/core/bots/from-scan.js';
 import { assistantSkill } from '../../../src/skills/assistant/plugin.js';
+import { friendlyModel } from '../../../src/channels/app/views/bots.js';
 import { plainLine } from '../../../src/skills/assistant/team-run.js';
 import { MapKeyValueStore } from '../../core/helpers.js';
 import { api, events, pairApp, startApp, until } from '../../channels/app/harness.js';
@@ -15,7 +16,9 @@ function teamModel(): LlmProvider & { purposes: string[] } {
     async complete(_model, request) {
       purposes.push(request.purpose);
       const p = request.purpose;
-      const text = p.endsWith('.plan')
+      const text = p === 'bots.describe_team'
+        ? JSON.stringify({ name: '영상 제작팀', purpose: '유튜브 영상을 매주 두 편 만들어요.', kind: 'general', roles: [{ title: '기획', does: '주제와 구성을 잡아요.' }, { title: '편집', does: '컷 편집과 자막을 맡아요.' }, { title: '썸네일', does: '썸네일과 제목을 만들어요.' }], brief: '- 채널: 유튜브 회사 채널\n- 주 2편(화·금 오전 공개)\n- 말투: 친근하고 짧게', groupLabel: 'Hanbit Lab' })
+        : p.endsWith('.plan')
         ? JSON.stringify({ assignments: [{ staff: 1, task: '로그인 화면 원인 찾기', say: '직원 1님, 로그인 화면이 왜 하얀지 봐 줄래요?' }, { staff: 2, task: '고친 뒤 확인 방법 정리', say: '직원 2님은 확인 방법을 정리해 주세요.' }] })
         : p.endsWith('.summary')
           ? '느린 인터넷에서 글꼴을 기다리던 문제였어요. 고쳤고 검수도 마쳤어요.'
@@ -44,7 +47,16 @@ describe('bot teams, team rooms and lead meetings (R16, R17)', () => {
       expect(group?.meetingChannel).toBe('meet-hanbit-lab');
       expect(group?.teams?.[0]).toMatchObject({ id: 'team-app', members: ['app-lead', 'app-s1', 'app-s2', 'app-s3', 'app-review'], tiers: { lead: 'A', staff: 'C', reviewer: 'S' } });
       expect(group?.bots.find((b) => b.id === 'app-review')).toMatchObject({ rank: 'reviewer', tier: 'S' });
+      expect(friendlyModel('claude-opus-5-5')).toBe('Claude Opus 5.5');
+      expect(friendlyModel('opus')).toBe('Claude Opus');
+      expect(friendlyModel('gpt-5.1')).toBe('gpt-5.1');
       expect(group?.teams?.[1]?.members).toEqual(['sales-lead', 'sales-s1', 'sales-s2', 'sales-s3']);
+
+      // one description in the owner's words → the team, members named after their jobs, the brief with the lead
+      const described = (await (await api(h, token, 'views/bots/createTeamFromText', { text: '영상 제작팀 만들어 줘. 유튜브 회사 채널에 주 2편(화·금 오전), 기획·편집·썸네일 담당, 말투는 친근하고 짧게.' })).json()) as { data: { teamId: string; group: string; members: { name: string }[]; briefKept: boolean } };
+      expect(described.data).toMatchObject({ group: 'hanbit-lab', briefKept: true });
+      expect(described.data.members.map((m) => m.name).join(' ')).toContain('기획');
+      expect(described.data.members.length).toBeGreaterThanOrEqual(4);
 
       // direct edits from the bot screen
       expect((await api(h, token, 'views/bots/renameTeam', { teamId: 'team-sales', name: '영업', purpose: '고객 응대' })).status).toBe(200);

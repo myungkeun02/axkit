@@ -30,6 +30,7 @@ import { cleanStoredInstructions } from '../../core/bots/instructions.js';
 import { companySection } from './company-context.js';
 import { ownChat, withinBudget } from './prompt-budget.js';
 import { Initiative, initiativeTool } from './initiative.js';
+import { createTeamTool } from './team-describe-tool.js';
 import { createBotTool, delegateTool, forScheduledRun, mentionSection, personaSection, rosterSection, withoutDelegation } from './bots.js';
 
 export interface AssistantSkillOptions {
@@ -291,6 +292,7 @@ export function assistantSkill(opts: AssistantSkillOptions = {}): Plugin {
       const directory = bots();
       if (directory !== undefined) {
         ctx.registerTool(createBotTool(directory, { korean, now: () => ctx.clock.now(), control: () => ctx.tryUse(Contracts.llmControl), compose, refine }));
+        ctx.registerTool(createTeamTool(ctx.llm, directory, { korean, now: () => ctx.clock.now(), control: () => ctx.tryUse(Contracts.llmControl), refine }));
         ctx.registerTool(delegateTool({ ctx, bots: directory, runBotTurn: async (bot, message) => await work(message, bot) }));
         // bots that find their own work once a day (owner can turn it off: bots.initiative)
         const initiative = new Initiative(ctx, korean);

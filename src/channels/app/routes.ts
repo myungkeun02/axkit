@@ -144,6 +144,10 @@ export function registerAppRoutes(api: DeviceApi, deps: AppRouteDeps): void {
 
   api.upload('share', async (upload) => {
     if (deps.inboxDir === undefined) return { status: 503, body: { ok: false, error: 'no_inbox' } };
+    // a team or bot room (header x-channel); none means the main chat
+    const room = upload.headers['x-channel']?.trim();
+    const channel = room === undefined || room === '' ? undefined : room;
+    if (channel !== undefined && !(await roomExists(ctx.tryUse(Contracts.bots), channel))) return bad('shape');
     const now = ctx.clock.now();
     const saved = await saveShare(deps.inboxDir, upload, now);
     await ctx.bus.emit('phone.shared_file', {
@@ -155,8 +159,8 @@ export function registerAppRoutes(api: DeviceApi, deps: AppRouteDeps): void {
       at: now,
     });
     const text = texts.sharedFile(upload.name, saved.kind, originOf(upload.caller));
-    const event = await log.append({ type: 'message', role: 'owner', text });
-    void ctx.bus.emit('message.received', ownerMessage(upload.caller, `app:${event.seq}`, text, now));
+    const event = await log.append({ type: 'message', role: 'owner', text, ...(channel !== undefined ? { channel } : {}) });
+    void ctx.bus.emit('message.received', ownerMessage(upload.caller, `app:${event.seq}`, text, now, channel));
     return { status: 200, body: { ok: true, seq: event.seq } };
   });
 

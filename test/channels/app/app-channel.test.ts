@@ -348,6 +348,14 @@ describe('app channel', () => {
       const path = join(h.home, 'files', 'inbox', month, file!);
       expect((await stat(path)).mode & 0o777).toBe(0o600);
       expect((await readFile(path)).length).toBe(3);
+
+      // a room that does not exist is refused; the main chat is the default
+      const elsewhere = await fetch(`${h.base}/m/v1/app/share`, {
+        method: 'POST',
+        headers: { authorization: `Bearer ${token}`, 'content-type': 'text/plain', 'x-file-name': 'a.txt', 'x-channel': 'team-nope' },
+        body: Buffer.from('hi'),
+      });
+      expect(elsewhere.status).toBe(400);
     } finally {
       await h.stop();
     }

@@ -31,6 +31,7 @@ import { GeoCache, routesView } from './views/routes.js';
 import { nodeProcessRunner } from '../../core/process/node-runner.js';
 import { BotAvatars, avatarRef } from './avatars.js';
 import { composer } from '../../core/bots/composition.js';
+import { describeTeam } from '../../core/bots/describe-team.js';
 import { refineInstructions } from '../../core/bots/teams.js';
 import { modelsView } from './views/models.js';
 import { browserLiveView, registerBrowserLiveRoutes } from './browser-live.js';
@@ -187,6 +188,7 @@ export function appChannel(opts: AppChannelOptions): Plugin {
             },
             refine: (team) => void refineInstructions(ctx.llm, directory, team, ctx.assistant.language !== 'en').catch(() => 0),
             compose: composer(ctx.llm, async () => (await ctx.tryUse(Contracts.llmControl)?.overBudget()) ?? false, ctx.assistant.language !== 'en'),
+            describe: (text) => describeTeam(ctx.llm, text, ctx.assistant.language !== 'en'),
             now: () => ctx.clock.now(),
           }),
         );

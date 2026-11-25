@@ -31,7 +31,7 @@ export interface DeviceUpload {
   bytes: Buffer;
   /** Path parameters of a pattern like "recordings/:id/chunks/:index". */
   params: Record<string, string>;
-  /** Only `x-chunk-total`, `x-started-at`, `x-duration-sec`, lower-cased; nothing else reaches handlers. */
+  /** Only `x-chunk-total`, `x-started-at`, `x-duration-sec`, `x-channel`, lower-cased; nothing else reaches handlers. */
   headers: Record<string, string>;
   /** Aborted when the device goes away before the answer (it cancelled): long work can stop. */
   signal?: AbortSignal;

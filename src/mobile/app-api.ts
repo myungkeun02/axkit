@@ -30,7 +30,7 @@ type DownloadHandler = (request: DeviceApiRequest) => Promise<DeviceFile | undef
 /** Path parameters: card ids, view names, file ids (docs/APP-PROTOCOL.md §7.3, §7.5). Never `.`/`..` alone. */
 const PARAM = /^[A-Za-z0-9_.:-]{1,200}$/;
 
-const UPLOAD_HEADERS = ['x-chunk-total', 'x-started-at', 'x-duration-sec'] as const;
+const UPLOAD_HEADERS = ['x-chunk-total', 'x-started-at', 'x-duration-sec', 'x-channel'] as const;
 
 function split(path: string): string[] {
   return path.split('/').filter((segment) => segment.length > 0);

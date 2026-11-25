@@ -4,8 +4,10 @@ import { BOT_ID, meetingChannel } from '../../../core/contracts/bots.js';
 import type { AppView } from '../../../core/contracts/device-api.js';
 import { ViewInputError, ownerInputError } from '../../../core/contracts/device-api.js';
 import type { LlmControl } from '../../../core/contracts/llm-control.js';
-import { buildTeam, membersOf, setTeamTiers, tierOfBot } from '../../../core/bots/teams.js';
+import { buildTeam, membersOf, setTeamTiers, TIER_OF_LETTER, tierOfBot } from '../../../core/bots/teams.js';
 import { botEditActions } from './bots-edit.js';
+import type { TeamDraft } from '../../../core/bots/describe-team.js';
+import { buildDescribedTeam } from '../../../core/bots/describe-team.js';
 import type { Composer } from '../../../core/bots/composition.js';
 import { checkInstructions, defaultInstructions } from '../../../core/bots/instructions.js';
 import { composedFields } from '../../../core/bots/composition.js';
@@ -21,6 +23,8 @@ export interface BotsViewOptions {
   compose?: Composer;
   /** Role prompts for the team's purpose, written in the background. */
   refine?: (team: BotTeam) => void;
+  /** The owner's free description of a team → a draft (one model call), for `createTeamFromText`. */
+  describe?: (text: string) => Promise<TeamDraft>;
   now: () => Date;
 }
 
@@ -36,9 +40,19 @@ const createSchema = z.object({
   reviewerCount: z.number().int().min(0).max(3).optional(),
   auto: z.boolean().optional(),
 });
+const describeSchema = z.object({ text: z.string().trim().min(5).max(6000), group: z.string().regex(BOT_ID).optional() });
 const tiersSchema = z.object({ teamId: z.string().min(1).max(40), tiers: z.object({ lead: letter, staff: letter, reviewer: letter }).partial() });
 const instructionsSchema = z.object({ botId: z.string().regex(BOT_ID), text: z.string().max(4000).nullable() });
 const meetingSchema = z.object({ group: z.string().regex(BOT_ID), topic: z.string().trim().min(1).max(500) });
+
+/** "claude-opus-5-5" → "Claude Opus 5.5", "opus" → "Claude Opus"; other names stay as they are. */
+export function friendlyModel(id: string): string {
+  const claude = /^(?:claude-)?(fable|mythos|opus|sonnet|haiku)(?:-(\d+)(?:-(\d+))?)?$/i.exec(id.trim());
+  if (claude === null) return id;
+  const family = (claude[1] ?? '').charAt(0).toUpperCase() + (claude[1] ?? '').slice(1).toLowerCase();
+  const version = claude[2] !== undefined ? ` ${claude[2]}${claude[3] !== undefined ? `.${claude[3]}` : ''}` : '';
+  return `Claude ${family}${version}`;
+}
 
 function newGroupId(label: string, taken: ReadonlySet<string>): string {
   const ascii = label.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 20);
@@ -64,6 +78,12 @@ export function botsView(options: BotsViewOptions): AppView {
       const dayAgo = options.now().getTime() - 86_400_000;
       const avatars = new Map(await Promise.all(bots.map(async (bot) => [bot.id, await options.avatarOf?.(bot.id)] as const)));
       const teamOf = new Map(teams.map((team) => [team.id, team]));
+      // the model each tier runs on now ("Claude Opus (구독)"), so the owner sees what a bot uses
+      const lineup = await options.control?.()?.tiers().catch(() => undefined);
+      const modelOf = new Map((lineup ?? []).map((row) => {
+        const first = row.models.find((model) => model.available);
+        return [row.tier, first === undefined ? undefined : `${friendlyModel(first.label)} · ${first.provider}`] as const;
+      }));
       const view = (bot: Bot) => {
         const team = bot.team !== undefined ? teamOf.get(bot.team) : undefined;
         return {
@@ -77,6 +97,7 @@ export function botsView(options: BotsViewOptions): AppView {
           ...(bot.rank !== undefined ? { rank: bot.rank } : {}),
           ...(bot.instructions !== undefined ? { instructions: bot.instructions, instructionsBy: bot.instructionsBy ?? 'default' } : {}),
           ...(team !== undefined ? { team: team.id, tier: tierOfBot(team, bot) } : {}),
+          ...(team !== undefined && modelOf.get(TIER_OF_LETTER[tierOfBot(team, bot)]) !== undefined ? { model: modelOf.get(TIER_OF_LETTER[tierOfBot(team, bot)]) } : {}),
           ...(Date.parse(bot.createdAt) > dayAgo ? { isNew: true } : {}),
         };
       };
@@ -115,6 +136,25 @@ export function botsView(options: BotsViewOptions): AppView {
     },
     actions: {
       ...botEditActions(directory, korean, ownerInputError),
+      /** One description in the owner's words ("영상 제작팀: …") → the team, its members and the owner's brief for the lead. */
+      async createTeamFromText(body) {
+        const parsed = describeSchema.safeParse(body);
+        if (!parsed.success) throw new ViewInputError('createTeamFromText needs {text, group?}');
+        if (options.describe === undefined) throw ownerInputError(korean ? 'AI가 연결되지 않아 설명으로 팀을 만들 수 없어요.' : 'No AI connected.');
+        const draft = await options.describe(parsed.data.text).catch((error: unknown) => {
+          throw ownerInputError(error instanceof Error ? error.message : String(error));
+        });
+        const control = options.control?.();
+        const { team, briefKept } = await buildDescribedTeam(draft, parsed.data.group, {
+          directory,
+          korean,
+          now: options.now(),
+          ...(control !== undefined ? { control } : {}),
+          ...(options.refine !== undefined ? { refine: options.refine } : {}),
+        });
+        const members = (await directory.list()).filter((bot) => bot.team === team.id).map((bot) => ({ id: bot.id, name: bot.name, role: bot.role }));
+        return { teamId: team.id, channel: team.id, group: team.group, name: team.name, purpose: team.purpose ?? draft.purpose, members, briefKept };
+      },
       async createTeam(body) {
         const parsed = createSchema.safeParse(body);
         if (!parsed.success) throw new ViewInputError('createTeam needs {group or newGroupLabel, name, kind}');
