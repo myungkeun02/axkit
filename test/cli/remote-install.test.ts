@@ -73,4 +73,36 @@ describe('reading files on another Mac without cloning anything there', () => {
     expect(code).toBe(0);
     expect(exchanged[0]).toEqual({ url: 'http://100.64.0.7:47720', code: 'ABCD-EFGH' });
   });
+
+  it('--ssh runs the install there with the defaults and no line to paste', async () => {
+    const kv = new MapKeyValueStore();
+    const clock = new FakeClock(NOW);
+    const install = new InstallLinks(kv, clock);
+    const said: string[] = [];
+    const prompter = createScriptedPrompter(['']);
+    prompter.say = (line: string) => void said.push(line);
+    const ran: [string, string][] = [];
+    const code = await remoteInstall({
+      remote: { prompter, secrets: new MemorySecretStore(), file: `/tmp/axk-remotes-${process.pid}-${Date.now()}-ssh.json`, now: () => NOW, thisMac: 'mini', post: (async () => ({ token: 't'.repeat(32), host: 'ops-mac' })) as never } as never,
+      home: '/h',
+      tarball: '/h/dist/ax-kit-source.tar.gz',
+      publicUrl: async () => 'https://mini.ts.net:8443',
+      openAdmin: () => ({ admin: new MobileAdmin({ kv, clock }), apk: new ApkLinks(kv, clock), install, close: async () => {} }),
+      exec: async () => ({ code: 0, stdout: '', stderr: '' }),
+      ssh: {
+        target: 'boss@ops-mac',
+        run: async (target, command) => {
+          ran.push([target, command]);
+          const [link] = (await kv.get<{ nonce: string }[]>('installLinks')) ?? [];
+          if (link !== undefined) await install.report(link.nonce, { url: 'http://100.64.0.9:47720', code: 'ABCD-EFGH' });
+          return 0;
+        },
+      },
+      sleep: async () => undefined,
+    });
+    expect(ran[0]?.[0]).toBe('boss@ops-mac');
+    expect(ran[0]?.[1]).toMatch(/^AX_KIT_SOURCE_DEFAULTS=1 bash -c "\$\(curl -fsSL https:\/\/mini\.ts\.net:8443\/m\/install\//);
+    expect(said.join('\n')).not.toContain('붙여 넣어');
+    expect(code).toBe(0);
+  });
 });

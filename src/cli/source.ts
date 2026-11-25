@@ -12,6 +12,8 @@ const CANDIDATES = ['Documents', 'Desktop', 'dev', 'Developer', 'projects', 'cod
 const MAX_FOLDERS = 30;
 
 export interface SourceSetupDeps {
+  /** No questions: every file and the coding sessions (an install run from the assistant's Mac). */
+  defaults?: boolean;
   prompter: Prompter;
   sourceHome: string;
   home: string;
@@ -86,6 +88,13 @@ async function askSharedFolders(deps: SourceSetupDeps, previous: readonly string
 export async function runSourceSetup(deps: SourceSetupDeps): Promise<SourceConfig> {
   const { prompter } = deps;
   const previous = await readSourceConfig(deps.sourceHome);
+  // set up from the assistant's Mac over SSH: nobody is at this keyboard, so the defaults (every file, the sessions)
+  if (deps.defaults === true) {
+    const config: SourceConfig = { folders: ['~'], sessions: true, port: previous?.port ?? DEFAULT_SOURCE_PORT };
+    await writeSourceConfig(deps.sourceHome, config);
+    prompter.say('보여 줄 범위: 모든 파일(홈 폴더 전체) · 대화 기록 포함 (기본값)');
+    return config;
+  }
   prompter.say('이 맥의 파일을 다른 맥에 있는 비서가 읽을 수 있게 해요 (읽기만).');
   prompter.say('- 키·비밀번호·.env·.ssh·여권·통장처럼 보이는 이름은 열지 않아요. 아무것도 바꾸거나 지우지 않아요.');
   prompter.say('- 연결은 Tailscale(내 기기끼리만 통하는 암호화된 망) 안에서만, 짝지은 맥만 할 수 있어요.');

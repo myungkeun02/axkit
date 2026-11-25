@@ -10,6 +10,7 @@ import { remotesFile } from '../connectors/remote-sources/store.js';
 import { renderLaunchAgent } from './launchd.js';
 import { execFileResult } from './phone-deps.js';
 import { createTtyPrompter } from './prompter.js';
+import { runAttached } from './update.js';
 import { addRemote, listRemotes, removeRemote } from './remote.js';
 import { remoteInstall } from './remote-install.js';
 import { openPhoneAdmin } from '../app/phone.js';
@@ -114,7 +115,7 @@ export async function sourceCommand(positionals: readonly string[]): Promise<num
   const sourceHome = defaultSourceHome();
   switch (positionals[1]) {
     case 'setup': {
-      await runSourceSetup({ prompter: createTtyPrompter(), sourceHome, home: homedir(), dirExists });
+      await runSourceSetup({ prompter: createTtyPrompter(), sourceHome, home: homedir(), dirExists, defaults: process.env.AX_KIT_SOURCE_DEFAULTS === '1' });
       say('다음: ax-kit source install (자동 시작) → ax-kit source pair (연결 코드)');
       return 0;
     }
@@ -149,7 +150,7 @@ export async function sourceCommand(positionals: readonly string[]): Promise<num
 }
 
 /** `ax-kit remote add | list | remove <name>`, run on the assistant's Mac. */
-export async function remoteCommand(positionals: readonly string[], home: string): Promise<number> {
+export async function remoteCommand(positionals: readonly string[], home: string, ssh?: string): Promise<number> {
   const deps = { prompter: createTtyPrompter(), secrets: new KeychainSecretStore(), file: remotesFile(home), now: () => new Date(), thisMac: hostname() };
   switch (positionals[1]) {
     case 'add':
@@ -160,6 +161,9 @@ export async function remoteCommand(positionals: readonly string[], home: string
         home,
         openAdmin: openPhoneAdmin,
         exec: execFileResult,
+        ...(ssh !== undefined && ssh.trim() !== ''
+          ? { ssh: { target: ssh.trim(), run: async (target: string, command: string) => await runAttached('/usr/bin/ssh', ['-o', 'StrictHostKeyChecking=accept-new', '-o', 'ConnectTimeout=15', target, command]) } }
+          : {}),
         publicUrl: async () => {
           const config = await phoneDeps(home).loadConfig().catch(() => undefined);
           const configured = config?.plugins['bridge.mobile']?.['publicUrl'];

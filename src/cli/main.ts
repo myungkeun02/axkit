@@ -34,6 +34,7 @@ const CLI_OPTIONS = {
   build: { type: 'boolean' },
   to: { type: 'string' },
   user: { type: 'string' },
+  ssh: { type: 'string' },
 } as const;
 
 const HELP = `ax-kit — a personal AI assistant on your Mac
@@ -66,6 +67,7 @@ Usage:
   ax-kit phone funnel [--fix]
   ax-kit phone push-test [<device id>]
   ax-kit remote add | list | remove <name>   다른 맥(작업용 맥북)의 파일 연결
+  ax-kit remote install [--ssh <사용자@주소>]  다른 맥에 설치·연결 (--ssh: 원격 로그인으로, 묻지 않고 기본값)
   ax-kit source setup | serve | pair | install | uninstall | status | revoke <name|all>
                          작업용 맥에서: 고른 폴더를 비서가 있는 맥에 읽기 전용으로 보여 줌
   ax-kit features        what is on, what is off, and how to turn it on
@@ -252,7 +254,7 @@ export async function main(argv: readonly string[] = process.argv.slice(2)): Pro
     case 'source':
       return await sourceCommand(positionals);
     case 'remote':
-      return await remoteCommand(positionals, home);
+      return await remoteCommand(positionals, home, values.ssh);
     default:
       printHelp();
       return 2;

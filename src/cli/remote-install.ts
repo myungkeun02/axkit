@@ -22,6 +22,8 @@ export interface RemoteInstallDeps {
   sleep?: (ms: number) => Promise<void>;
   /** For tests: the source tarball already made. */
   tarball?: string;
+  /** `--ssh user@host`: run the install there over SSH (macOS Remote Login), with the defaults and no questions. */
+  ssh?: { target: string; run: (target: string, command: string) => Promise<number> };
 }
 
 /** This checkout as a tarball (`git archive`: the code without node_modules or local files) to hand to another Mac. */
@@ -52,10 +54,19 @@ export async function remoteInstall(deps: RemoteInstallDeps): Promise<number> {
   }
   let handle = deps.openAdmin(deps.home);
   const link = await handle.install.create({ zip: tarball, base, pair: '', kind: 'source', ttlMs: LINK_TTL_MS }).finally(() => handle.close());
+  if (deps.ssh !== undefined) {
+    prompter.say(`${deps.ssh.target}에 원격으로 설치하고 연결할게요. 모든 파일(홈 폴더 전체)과 대화 기록을 보여 주는 기본값으로 해요.`);
+    const code = await deps.ssh.run(deps.ssh.target, `AX_KIT_SOURCE_DEFAULTS=1 ${installCommand(link)}`);
+    if (code !== 0) {
+      prompter.say('원격 설치가 끝나지 않았어요. 그 맥에서 시스템 설정 › 일반 › 공유 › "원격 로그인"이 켜져 있는지, Homebrew가 있는지 확인해 주세요 (Homebrew 설치는 그 맥에서 직접 비밀번호를 넣어야 해요).');
+      return 1;
+    }
+  } else {
   prompter.say('파일을 읽을 맥(업무용 맥북 등)에서 터미널(응용 프로그램 › 유틸리티 › 터미널)을 열고, 아래 한 줄을 붙여 넣어 엔터를 눌러 주세요.');
   prompter.say('그 맥에 ax-kit을 받고, 보여 줄 폴더를 고르게 한 뒤, 연결까지 알아서 해요 (30분 안에, 한 번만). 두 맥 모두 Tailscale에 같은 계정으로 로그인돼 있어야 해요.');
   prompter.say(`  ${installCommand(link)}`);
   prompter.say('그 맥에서 끝나기를 기다리는 중이에요… (Ctrl+C로 그만두면 나중에 `ax-kit remote add`로 연결할 수 있어요)');
+  }
   const sleep = deps.sleep ?? ((ms: number) => new Promise<void>((resolve) => setTimeout(resolve, ms)));
   const until = Date.parse(link.expiresAt);
   for (;;) {
