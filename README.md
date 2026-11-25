@@ -17,7 +17,7 @@
 - `ax-kit setup`: 처음이면 7단계만 물어요(비서 → AI 연결 → 대화할 곳 → 메일·캘린더 → 기본 기능 → 알림 → 처음 알아보기, ↑↓로 고르고 Enter, 여러 개는 Space, "직접 입력" 가능). 끝에 "이렇게 설정했어요" 요약이 나와요. 이미 설정돼 있으면 켜진·꺼진 기능 표를 보여 준 뒤 **꺼진 것만** 이어서 설정(AI 연결, Google, 첫 문서 살펴보기 → 회사별 팀, launchd, 앱 짝 맞추기 QR)하거나 선택 기능을 고를 수 있어요.
 - `ax-kit setup features` (= `ax-kit features add`): 선택 기능(카톡 PC 읽기, 개발 보조, 받아쓰기, 앱 개발 준비 등)을 켜고 끄기. 특정 일에만 쓰는 팩(인재 소개 등)은 묻지 않고, 처음 알아보기가 끝나면 비서가 맞는 것을 제안해요.
 - `ax-kit features`: 지금 켜진 기능과 꺼진 기능, 켜는 법. 앱은 서버가 알려 준 기능만 보이므로 "앱에 왜 안 보이지?"의 답이 여기 있습니다.
-- `ax-kit update`: 새 코드(fast-forward만) → 패키지 → 백그라운드 서비스 재시작.
+- `ax-kit update`: 이 맥에서 고친 내용(커밋 안 한 것은 먼저 이 맥 안에서만 커밋)을 새 코드 위에 다시 얹음 → 패키지 → 시작되는지 확인 → 백그라운드 서비스 재시작. 고친 곳이 새 코드와 겹치거나, 설치·시작에 실패하면 업데이트 전 그대로 되돌림(전 코드는 `ax-kit-before-update` 브랜치).
 
 1. 서버(맥): `pnpm install` → `pnpm ax-kit setup`(이름·언어·채널 `discord|app|both`·LLM 키, 비밀은 Keychain) → `pnpm ax-kit doctor` → `pnpm ax-kit service install`(로그인 시 자동 시작) 또는 `pnpm ax-kit start`.
 2. 클라이언트 앱(iOS·Android·맥 데스크톱)은 별도 저장소(ax-kit-ios·ax-kit-android·ax-kit-desktop)에 있다. 맥 앱은 `ax-kit phone install-mac`으로 이 맥이 다른 맥에 설치·연결해 준다. 서버와 앱의 약속은 [APP-PROTOCOL.md](docs/APP-PROTOCOL.md).

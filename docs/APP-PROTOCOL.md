@@ -349,7 +349,7 @@ actual:{since, byTier:[{tier, models:[{vendor,model,calls,failures,costKrw}]}], 
 
 - `bash install.sh`(멱등): Homebrew 확인 → Node 22.13+·pnpm → 코드(이 체크아웃, `$AX_KIT_DIR`, 없으면 `gh repo clone`) → `pnpm install` → `ax-kit`을 Homebrew bin(또는 `~/.local/bin`)에 연결 → `ax-kit setup`.
 - `ax-kit setup`: 설정이 있으면 기능 표를 먼저 보이고 "꺼진 것만 이어서 / 처음부터 / 그대로" 중 고름. 꺼진 것만: AI 연결, Google(캘린더·Gmail·Drive), 받아쓰기(whisper.cpp + ffmpeg + 모델, 이어받기), 첫 문서 살펴보기(끝나면 회사별 묶음·팀 자동 생성, R16), launchd, 앱 짝 맞추기 QR. 푸시 키·Tailscale은 다른 기기가 필요해 명령만 안내.
-- `ax-kit features`: 기본·앱·AI·Google·기능 묶음별 ✓/✗ 표와 꺼진 것의 켜는 법. `ax-kit update`: `git pull --ff-only` → `pnpm install --frozen-lockfile` → 서비스가 있으면 재시작.
+- `ax-kit features`: 기본·앱·AI·Google·기능 묶음별 ✓/✗ 표와 꺼진 것의 켜는 법. `ax-kit update`: 이 맥의 수정을 보관(커밋) → `git fetch` → 새 코드 위에 다시 얹기(rebase) → `pnpm install --frozen-lockfile` → `ax-kit help`로 시작 확인 → 서비스가 있으면 재시작. 겹침·실패면 전 코드로 되돌림.
 
 ## 13. 2026-11-19 추가 6 (C 등급, 팀 구성 하네스, 등급표 하네스)
 

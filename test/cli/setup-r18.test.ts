@@ -3,7 +3,6 @@ import { featureRows, formatFeatures } from '../../src/cli/features.js';
 import type { FeatureDeps } from '../../src/cli/features.js';
 import { createScriptedPrompter } from '../../src/cli/prompter.js';
 import { WHISPER_MODEL_URL, setupTranscriber } from '../../src/cli/setup-transcribe.js';
-import { updateCommand } from '../../src/cli/update.js';
 import { parseConfig } from '../../src/core/config/load.js';
 import { MemorySecretStore } from '../../src/core/secrets/memory.js';
 
@@ -67,17 +66,5 @@ describe('setup CLI (R18)', () => {
 
     const later = await setupTranscriber({ ...base, prompter: createScriptedPrompter(['2']), hasCommand: async () => false, exists: async () => false });
     expect(later).toBe(false);
-  });
-
-  it('updates fast-forward only and restarts the service when it is installed', async () => {
-    const ran: string[] = [];
-    const said: string[] = [];
-    const code = await updateCommand((line) => said.push(line), async (cmd, args) => (ran.push(`${cmd} ${args.join(' ')}`), 0));
-    expect(code).toBe(0);
-    expect(ran[0]).toMatch(/^git -C .* pull --ff-only$/);
-    expect(ran[1]).toBe('pnpm install --frozen-lockfile');
-    expect(ran.some((line) => line.startsWith('launchctl kickstart -k'))).toBe(true);
-    const failed = await updateCommand((line) => said.push(line), async (cmd) => (cmd === 'git' ? 1 : 0));
-    expect(failed).toBe(1);
   });
 });
