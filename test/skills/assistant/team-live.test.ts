@@ -20,6 +20,25 @@ function member(id: string, rank: Bot['rank']): Bot {
 
 const assign = (staff: number[]) => JSON.stringify({ assignments: staff.map((n) => ({ staff: n, task: `일 ${n}`, say: `${n}번 부탁해요.` })) });
 
+describe('members build on each other', () => {
+  it('gives each member the owner task, its part, the earlier results and a nudge to use its tools', async () => {
+    const llm = new ScriptedLlm([assign([1, 2]), '정리했어요.']);
+    const asked: string[] = [];
+    const answers = [{ text: '메일 목록: 1) 김민수 견적 문의 2) 이지은 일정 문의' }, { text: '분류: 견적 1, 일정 1' }];
+    await runTeam(
+      { ctx: { llm } as unknown as PluginContext, korean: true, runAs: async (_bot, text) => (asked.push(text), answers.shift() ?? { text: '' }), say: async () => undefined },
+      TEAM,
+      [member('shop-lead', 'lead'), member('shop-s1', 'staff'), member('shop-s2', 'staff')],
+      '받은 메일 정리해 줘',
+    );
+    expect(asked[0]).toContain('오너가 팀에 맡긴 일: 받은 메일 정리해 줘');
+    expect(asked[0]).toContain('도구로 직접');
+    expect(asked[0]).not.toContain('앞 사람들이 넘긴 결과');
+    expect(asked[1]).toContain('앞 사람들이 넘긴 결과:\nshop-s1: 메일 목록: 1) 김민수 견적 문의');
+    expect(llm.requests[0]?.messages[0]?.content).toContain('each sees what the earlier ones handed back');
+  });
+});
+
 describe('team replies carry `live` (§22)', () => {
   it('passes the last page a member left up to the lead’s answer', async () => {
     const llm = new ScriptedLlm([assign([1, 2]), '로그인에서 멈췄어요. 앱에서 이어 주세요.']);

@@ -18,8 +18,8 @@ export function personaSection(bot: Bot, korean: boolean): string {
   // the role prompt describes the work; the approval rules above it stay in force whatever it says
   const how = bot.instructions !== undefined && bot.instructions !== '' ? `\n${korean ? '일하는 방식' : 'How you work'}:\n${bot.instructions}` : '';
   return korean
-    ? `## 지금 당신은 "${bot.name}"입니다\n하는 일: ${bot.role}${how}\n이 방에서는 이 역할 안에서만 답하고 일하세요. 역할 밖의 일이면 메인 대화(비서)에 부탁하라고 쉬운 말로 안내하세요. 위의 확인 규칙은 이 역할보다 늘 먼저예요.`
-    : `## You are now "${bot.name}"\nRole: ${bot.role}${how}\nIn this room, answer and work only within this role. For anything else, tell the owner in plain words to ask the main assistant. The confirmation rules above always come first.`;
+    ? `## 지금 당신은 "${bot.name}"입니다\n하는 일: ${bot.role}${how}\n이 역할을 중심으로 일하되, 팀장이 맡긴 일이나 오너가 이 방에서 부탁한 일은 미루지 말고 도구로 직접 해요: 메일·캘린더 읽기, 문서·회사 문서, 이 맥의 파일, 업무보드·할 일, 웹 보기(web.look)와 웹에서 하기(web.do). 묻기 전에 먼저 찾아보고, 정말 할 수 없을 때만 무엇이 없어서 못 하는지 말해요. 위의 확인 규칙은 이 역할보다 늘 먼저예요.`
+    : `## You are now "${bot.name}"\nRole: ${bot.role}${how}\nWork from this role, but do what your lead hands you or the owner asks in this room yourself, with your tools: reading mail and the calendar, documents and company docs, files on this Mac, the work board and to-dos, looking at the web (web.look) and acting on it (web.do). Look things up before asking; only when you truly cannot, say what is missing. The confirmation rules above always come first.`;
 }
 
 /** Added to the main chat's prompt: who can take a task. */
@@ -62,7 +62,7 @@ export function mentionSection(text: string, bots: readonly Bot[], korean: boole
  * What a bot's own turn cannot do: hand work to another bot (no chains), or set up lasting work by itself — new
  * routines, new bots, switching on autonomous loops. Those stay the owner's (and the main assistant's) to decide.
  */
-const BOT_FORBIDDEN = new Set(['bots.delegate', 'bots.create', 'bots.initiative', 'dev.autopilot', 'routines.add', 'routines.remove', 'routines.pause']);
+const BOT_FORBIDDEN = new Set(['bots.delegate', 'bots.create', 'bots.create_team', 'bots.initiative', 'dev.autopilot', 'routines.add', 'routines.remove', 'routines.pause']);
 
 /** A bot turn never delegates again, so a chain of hand-offs cannot loop; nor can it schedule more work for itself. */
 export function withoutDelegation(tools: Toolbox): Toolbox {
@@ -76,7 +76,7 @@ export function withoutDelegation(tools: Toolbox): Toolbox {
 }
 
 /** What a scheduled run (a routine) cannot do: schedule more of itself or switch on autonomous loops. */
-const SCHEDULED_FORBIDDEN = new Set(['bots.create', 'bots.initiative', 'dev.autopilot', 'routines.add', 'routines.remove', 'routines.pause']);
+const SCHEDULED_FORBIDDEN = new Set(['bots.create', 'bots.create_team', 'bots.initiative', 'dev.autopilot', 'routines.add', 'routines.remove', 'routines.pause']);
 
 export function forScheduledRun(tools: Toolbox): Toolbox {
   return {
