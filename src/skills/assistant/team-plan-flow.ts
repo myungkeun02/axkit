@@ -6,7 +6,8 @@ import { teamName } from '../../core/contracts/bots.js';
 import type { SyncResult } from './team-plan-sync.js';
 import { syncBuiltTeams } from './team-plan-sync.js';
 import { Contracts } from '../../core/contracts/index.js';
-import type { KnowledgeLine } from '../../core/contracts/knowledge.js';
+import type { ScanResult } from '../../core/contracts/knowledge.js';
+import { mergeTeams, placeRoutines, projectTeams, sameAsBefore, unitTeams } from './team-plan-units.js';
 import { ViewInputError } from '../../core/contracts/device-api.js';
 import type { PluginContext } from '../../core/plugin/types.js';
 import type { PlanTeam, TeamPlan } from './team-plan.js';
@@ -30,27 +31,28 @@ const saveInput = z.object({ teams: PlanSchema.shape.teams });
 export class TeamPlanFlow {
   constructor(private readonly deps: TeamPlanDeps) {}
 
-  /** True when the scan had a hierarchy to propose; false leaves the older automatic teams in charge. */
-  async propose(scan: { projects: readonly KnowledgeLine[] }): Promise<boolean> {
+  /**
+   * True when the scan had something to propose: the real departments and teams it found, the picked projects, and
+   * the recurring work with its evidence. False leaves the older automatic teams in charge. A plan still waiting is
+   * updated in place (no second card); an answered one is proposed again only when something new turned up.
+   */
+  async propose(scan: Pick<ScanResult, 'projects' | 'units' | 'routines'>): Promise<boolean> {
     const planned = planFromScan(scan.projects);
-    if (planned.length === 0) return false;
+    const teams = mergeTeams(unitTeams(scan.units ?? []), projectTeams(planned));
+    if (teams.length === 0 && (scan.routines ?? []).length === 0) return false;
     const { ctx, korean } = this.deps;
-    const routines = await suggestRoutines({ llm: ctx.llm, log: ctx.log, korean }, planned);
+    const own = placeRoutines(teams, scan.routines ?? []);
+    // the work map's recurring tasks still get routines where nothing better was found
+    const suggested = await suggestRoutines({ llm: ctx.llm, log: ctx.log, korean }, planned.filter((team) => !teams.some((item) => item.name === team.name && item.routines.length > 0)));
+    for (const team of teams) if (team.routines.length === 0) team.routines.push(...(suggested.get(team.name) ?? []));
+    const previous = await readPlan(ctx.kv);
+    if (previous !== undefined && previous.status !== 'proposed' && sameAsBefore(previous, teams, own)) return true;
     const at = ctx.clock.now().toISOString();
-    const plan: TeamPlan = {
-      id: `p${ctx.clock.now().getTime().toString(36)}`,
-      createdAt: at,
-      status: 'proposed',
-      teams: planned.slice(0, 24).map((team) => ({
-        company: team.company.slice(0, 80),
-        name: team.name.slice(0, 60),
-        purpose: team.purpose.slice(0, 300),
-        kind: team.kind,
-        roles: team.roles.slice(0, 6).map((role) => ({ title: role.title.slice(0, 20), does: role.does.slice(0, 120) })),
-        tasks: team.tasks.slice(0, 10).map((task) => task.slice(0, 80)),
-        routines: routines.get(team.name) ?? [],
-      })),
-    };
+    if (previous?.status === 'proposed') {
+      await savePlan(ctx.kv, { ...previous, teams, routines: own });
+      return true;
+    }
+    const plan: TeamPlan = { id: `p${ctx.clock.now().getTime().toString(36)}`, createdAt: at, status: 'proposed', teams, routines: own };
     await savePlan(ctx.kv, plan);
     void this.ask(plan);
     return true;
@@ -118,6 +120,10 @@ export class TeamPlanFlow {
         const outcome = await ctx.tools.execute('routines.add', { title: routine.title, instruction: routine.instruction, schedule: routine.schedule, bot: team.lead }, { grounding: [] });
         if (outcome.status === 'done') routines += 1;
       }
+    }
+    for (const routine of plan.routines) {
+      const outcome = await ctx.tools.execute('routines.add', { title: routine.title, instruction: routine.instruction, schedule: routine.schedule }, { grounding: [] });
+      if (outcome.status === 'done') routines += 1;
     }
     await savePlan(ctx.kv, { ...plan, status: 'applied', appliedAt: ctx.clock.now().toISOString() });
     const text = korean ? `팀 ${made}개${routines > 0 ? `와 루틴 ${routines}개` : ''}를 만들었어요. 봇 목록에서 볼 수 있어요.` : `Set up ${made} teams${routines > 0 ? ` and ${routines} routines` : ''}.`;

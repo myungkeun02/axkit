@@ -284,7 +284,9 @@ describe('model failures', () => {
     await setup.runner.run('first', new AbortController().signal);
 
     expect(setup.state.current.status).toBe('done');
-    expect(llm.ofPurpose('onboarding.summarize')).toHaveLength(2);
+    // files are read a few at a time once the model has answered: calls already under way may fail too, no new ones start
+    expect(llm.ofPurpose('onboarding.summarize').length).toBeGreaterThanOrEqual(2);
+    expect(llm.ofPurpose('onboarding.summarize').length).toBeLessThanOrEqual(3);
     expect(llm.ofPurpose('onboarding.profile')).toHaveLength(1);
     const projects = writer.results[0]?.projects ?? [];
     expect(projects).toEqual(
@@ -367,7 +369,9 @@ describe('stop and resume', () => {
     await setup.runner.run('manual', controller.signal);
 
     expect(setup.state.current.status).toBe('done');
-    expect(llm.ofPurpose('onboarding.summarize')).toHaveLength(2);
+    // files are read a few at a time once the model has answered: calls already under way may fail too, no new ones start
+    expect(llm.ofPurpose('onboarding.summarize').length).toBeGreaterThanOrEqual(2);
+    expect(llm.ofPurpose('onboarding.summarize').length).toBeLessThanOrEqual(3);
     expect(llm.ofPurpose('onboarding.profile')).toHaveLength(1);
   });
 });

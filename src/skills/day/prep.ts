@@ -11,7 +11,7 @@ const MAX_COMMITMENTS = 2;
 const MAIL_LOOKBACK_HOURS = 336;
 
 function eventLine(event: CalendarEvent, texts: DayTexts, timeZone: string): string {
-  const location = event.location !== undefined && event.location !== '' ? ` ${texts.locationMark}${event.location}` : '';
+  const location = (event.location !== undefined && event.location !== '' ? ` ${texts.locationMark}${event.location}` : '') + (event.calendar !== undefined && event.calendar !== '' ? ` [${event.calendar}]` : '');
   if (event.allDay) return `${texts.allDay} ${event.title}${location}`;
   const time = hhmmOf(event.start, timeZone);
   return `${time ?? event.start} ${event.title}${location}`;

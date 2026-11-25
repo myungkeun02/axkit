@@ -103,7 +103,7 @@ describe('runSetup', () => {
     expect(config.assistant.ownerName).toBeUndefined();
     expect(config.owner.discordUserId).toBe(PAIRED_OWNER_ID);
     expect(config.policy.confirmWrites).toBe(false);
-    expect(config.llm.providers.map((provider) => provider.id)).toEqual(['anthropic', 'anthropic-haiku']);
+    expect(config.llm.providers.map((provider) => provider.id)).toEqual(['anthropic-fable', 'anthropic-opus', 'anthropic', 'anthropic-haiku']);
     expect(config.llm.budget).toEqual({ dailyUsd: 0.5, monthlyUsd: 10 });
     expect(config.plugins['skill.briefing']).toEqual({ enabled: true, at: '08:00' });
     expect(config.plugins['connector.google-calendar']).toEqual({ enabled: true });

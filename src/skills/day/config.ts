@@ -45,6 +45,8 @@ export type NudgeSettings = z.infer<typeof nudgesSchema>;
 const configSchema = z.object({
   prep: z.boolean().default(true),
   travel: z.boolean().default(true),
+  /** A meeting with a video link (Meet, Zoom, Teams): its join link ten minutes before. */
+  meetLinks: z.boolean().default(true),
   close: z.boolean().default(true),
   replies: z.boolean().default(true),
   voice: z.boolean().default(true),

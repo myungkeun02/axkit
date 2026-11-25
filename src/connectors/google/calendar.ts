@@ -9,6 +9,7 @@ import type {
 } from '../../core/contracts/calendar.js';
 import type { GoogleRequestFn } from './http.js';
 import { isRecord } from './json.js';
+import { meetLinkIn } from '../../core/text/meet-link.js';
 
 const API = 'https://www.googleapis.com/calendar/v3';
 const LIST_URL = `${API}/users/me/calendarList?minAccessRole=reader&maxResults=100`;
@@ -80,7 +81,19 @@ function toEvent(raw: unknown): CalendarEvent | undefined {
     ...(typeof raw.location === 'string' && raw.location !== '' ? { location: raw.location } : {}),
     ...(attendees.length > 0 ? { attendees } : {}),
     ...(typeof raw.htmlLink === 'string' && raw.htmlLink !== '' ? { url: raw.htmlLink } : {}),
+    ...meetOf(raw),
   };
+}
+
+/** The event's video link: Google Meet's own field, a conference entry point, or a link written in the place. */
+function meetOf(raw: Record<string, unknown>): { meetLink?: string } {
+  if (typeof raw.hangoutLink === 'string' && raw.hangoutLink.startsWith('https://')) return { meetLink: raw.hangoutLink };
+  const points = isRecord(raw.conferenceData) && Array.isArray(raw.conferenceData.entryPoints) ? raw.conferenceData.entryPoints : [];
+  for (const point of points) {
+    if (isRecord(point) && point.entryPointType === 'video' && typeof point.uri === 'string' && point.uri.startsWith('https://')) return { meetLink: point.uri };
+  }
+  const written = [raw.location, raw.description].map((value) => (typeof value === 'string' ? meetLinkIn(value) : undefined)).find((value) => value !== undefined);
+  return written !== undefined ? { meetLink: written } : {};
 }
 
 /**

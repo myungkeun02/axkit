@@ -30,6 +30,7 @@ export const CATALOG: readonly CatalogEntry[] = [
     priceOut: 10,
     maxSensitivity: 'sensitive',
     models: [
+      { model: 'claude-fable-5-2', tiers: ['deep'] },
       { model: 'claude-opus-5-5', tiers: ['deep'] },
       { model: 'claude-sonnet-5-5', tiers: ['standard'] },
       { model: 'claude-haiku-5-5', tiers: ['fast', 'cheap'] },

@@ -6,6 +6,19 @@ export interface OnboardingFinished {
   counts: RunCounts;
   added: number;
   retired: number;
+  /** Readable files left for the next run. */
+  pending?: number;
+  found?: { people: number; units: number; routines: number };
+}
+
+function foundKo({ found, pending }: OnboardingFinished): string {
+  const parts = found === undefined ? '' : ` 사람 ${found.people}명 · 부서·팀 ${found.units}개 · 반복 업무 ${found.routines}개를 찾았어요.`;
+  return parts + (pending !== undefined && pending > 0 ? ` 아직 못 읽은 파일 ${pending}개는 한 시간 뒤부터 이어서 읽어요.` : '');
+}
+
+function foundEn({ found, pending }: OnboardingFinished): string {
+  const parts = found === undefined ? '' : ` Found ${found.people} people, ${found.units} departments/teams and ${found.routines} recurring tasks.`;
+  return parts + (pending !== undefined && pending > 0 ? ` ${pending} files are still unread; the next run starts in an hour.` : '');
 }
 
 export interface OnboardingTexts {
@@ -65,9 +78,10 @@ const KO: OnboardingTexts = {
   activeStatus: '진행 중',
   restingStatus: '쉬는 중',
   progress: (phase, done, total) => `${KO_PHASE[phase]} 살펴보는 중… ${done}/${total}`,
-  finished: ({ counts, added, retired }) =>
-    `알아보기 끝났어요. 새로 ${added}줄, 정리한 ${retired}줄. ` +
-    `파일 ${counts.files} · 저장소 ${counts.repos} · 프로젝트 문서 ${counts.docs} · 대화 기록 ${counts.sessions} · Drive ${counts.drive} · 요약 ${counts.summarized} · 신호 ${counts.signals}`,
+  finished: (summary) =>
+    `알아보기 끝났어요. 새로 ${summary.added}줄, 정리한 ${summary.retired}줄. ` +
+    `파일 ${summary.counts.files} · 저장소 ${summary.counts.repos} · 프로젝트 문서 ${summary.counts.docs} · 대화 기록 ${summary.counts.sessions} · Drive ${summary.counts.drive} · 요약 ${summary.counts.summarized} · 신호 ${summary.counts.signals}.` +
+    foundKo(summary),
   status: (state, cacheSize) =>
     `알아보기: ${KO_STATUS[state.status]} · ${KO_PHASE[state.phase]} · ` +
     `파일 ${state.counts.files} · 저장소 ${state.counts.repos} · 프로젝트 문서 ${state.counts.docs} · 대화 기록 ${state.counts.sessions} · Drive ${state.counts.drive} · ` +
@@ -109,9 +123,10 @@ const EN: OnboardingTexts = {
   activeStatus: 'active',
   restingStatus: 'resting',
   progress: (phase, done, total) => `${EN_PHASE[phase]}: ${done}/${total}`,
-  finished: ({ counts, added, retired }) =>
-    `The first look is finished. ${added} new lines, ${retired} retired. ` +
-    `files ${counts.files} · repos ${counts.repos} · project docs ${counts.docs} · sessions ${counts.sessions} · Drive ${counts.drive} · summaries ${counts.summarized} · signals ${counts.signals}`,
+  finished: (summary) =>
+    `The first look is finished. ${summary.added} new lines, ${summary.retired} retired. ` +
+    `files ${summary.counts.files} · repos ${summary.counts.repos} · project docs ${summary.counts.docs} · sessions ${summary.counts.sessions} · Drive ${summary.counts.drive} · summaries ${summary.counts.summarized} · signals ${summary.counts.signals}.` +
+    foundEn(summary),
   status: (state, cacheSize) =>
     `First look: ${EN_STATUS[state.status]} · ${EN_PHASE[state.phase]} · ` +
     `files ${state.counts.files} · repos ${state.counts.repos} · project docs ${state.counts.docs} · sessions ${state.counts.sessions} · Drive ${state.counts.drive} · ` +

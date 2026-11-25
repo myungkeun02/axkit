@@ -431,7 +431,8 @@ describe('createAnthropicProvider', () => {
       messages: { role: string; content: string }[];
     };
     expect(body.system).toBe('one\n\ntwo');
-    expect(body.max_tokens).toBe(1024);
+    // a Claude 5 model thinks first: room for it on top, and effort by tier
+    expect(body.max_tokens).toBe(1024 + 4096);
     expect(body.messages).toEqual([{ role: 'user', content: 'hi' }]);
 
     expect(result.text).toBe('Hello world');

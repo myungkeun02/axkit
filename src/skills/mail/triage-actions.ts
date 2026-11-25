@@ -147,6 +147,11 @@ async function handToTeam(ctx: PluginContext, action: TodoSuggestion, message: M
   await tell(ctx, texts.teamHanded(action.text), `team:${message.id}`);
 }
 
+/** One suggestion the owner chose from the mail card; `choice` "team" hands a to-do to a team. */
+export async function runSuggestion(ctx: PluginContext, action: Suggestion, message: MailMessage, texts: TriageTexts, choice: string): Promise<void> {
+  await runOne(ctx, action, message, texts, choice);
+}
+
 async function runOne(ctx: PluginContext, action: Suggestion, message: MailMessage, texts: TriageTexts, choice: string): Promise<void> {
   const call: ToolCallContext = { grounding: mailGrounding(message) };
   if (action.kind === 'todo' && choice === 'team') await handToTeam(ctx, action, message, texts);

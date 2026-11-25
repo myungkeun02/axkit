@@ -3,6 +3,7 @@ import type { PersonCommitment, PersonInteraction, PersonProfile, PersonSummary 
 import type { Clock } from '../../core/scheduler/types.js';
 import type { KeyValueStore } from '../../core/store/types.js';
 import { bareEmail, editDistance, personKey } from './people-keys.js';
+import { CARD_FIELDS, PROFILE_LIMITS, fillFromScan, ownerSet } from './people-scan.js';
 
 export interface StoredPerson {
   key: string;
@@ -11,6 +12,8 @@ export interface StoredPerson {
   interactions: PersonInteraction[];
   commitments: PersonCommitment[];
   profile?: PersonProfile;
+  /** Card fields the first look wrote; the owner's own words replace them and a later scan may update them. */
+  scanFields?: string[];
   updatedAt: string;
 }
 
@@ -32,12 +35,11 @@ const MAX_INTERACTIONS = 30;
 const MAX_COMMITMENTS = 30;
 const MAX_ALIASES = 5;
 const SUGGESTION_LIMIT = 3;
-const PROFILE_LIMITS: Record<keyof PersonProfile, number> = { title: 40, company: 60, relation: 80, note: 400 };
 
 /** The card after `patch`: a new value replaces the field, an empty one keeps it; a new note line is added to the note. */
 export function mergeProfile(current: PersonProfile | undefined, patch: PersonProfile): PersonProfile {
   const out: PersonProfile = { ...current };
-  for (const field of ['title', 'company', 'relation'] as const) {
+  for (const field of ['title', 'company', 'team', 'relation'] as const) {
     const value = patch[field]?.trim();
     if (value !== undefined && value !== '') out[field] = value.slice(0, PROFILE_LIMITS[field]);
   }
@@ -139,7 +141,16 @@ export class PeopleStore {
   async setProfile(identity: PersonIdentity, patch: PersonProfile): Promise<StoredPerson> {
     const person = await this.ensure(identity);
     person.profile = mergeProfile(person.profile, patch);
+    ownerSet(person, Object.keys(patch));
     person.updatedAt = this.clock.now().toISOString();
+    await this.persist();
+    return person;
+  }
+
+  /** What the first look read about a person; see `fillFromScan` in people-scan.ts. */
+  async fillFromScan(identity: PersonIdentity, patch: PersonProfile): Promise<StoredPerson> {
+    const person = await this.ensure(identity);
+    if (fillFromScan(person, patch)) person.updatedAt = this.clock.now().toISOString();
     await this.persist();
     return person;
   }
@@ -149,11 +160,12 @@ export class PeopleStore {
     const person = this.people.get(key);
     if (person === undefined) return undefined;
     const next: PersonProfile = {};
-    for (const field of ['title', 'company', 'relation', 'note'] as const) {
+    for (const field of CARD_FIELDS) {
       const value = (fields[field] ?? person.profile?.[field] ?? '').trim().slice(0, PROFILE_LIMITS[field]);
       if (value !== '') next[field] = value;
     }
     person.profile = next;
+    ownerSet(person, Object.keys(fields).filter((field) => fields[field as keyof PersonProfile] !== undefined));
     person.updatedAt = this.clock.now().toISOString();
     await this.persist();
     return person;

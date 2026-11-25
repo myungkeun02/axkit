@@ -78,10 +78,10 @@ describe('AI connections and tiers from the app (R7, R12)', () => {
     await control.apply();
     await control.connect('anthropic', 'sk-ant-1234567890abcdef');
     const deep = (await control.tiers()).find((row) => row.tier === 'deep');
-    expect(deep?.models.map((m) => m.id)).toEqual(['mac/cli', 'anthropic/claude-opus-5-5']);
+    expect(deep?.models.map((m) => m.id)).toEqual(['mac/cli', 'anthropic/claude-fable-5-2', 'anthropic/claude-opus-5-5']);
     expect(await control.rank('deep', ['anthropic/claude-opus-5-5'])).toBe(false);
-    expect(await control.rank('deep', ['anthropic/claude-opus-5-5', 'mac/cli'])).toBe(true);
-    expect(gateway.describe().routes.filter((r) => r.tiers.includes('deep')).map((r) => r.providerId)).toEqual(['anthropic', 'mac']);
+    expect(await control.rank('deep', ['anthropic/claude-fable-5-2', 'anthropic/claude-opus-5-5', 'mac/cli'])).toBe(true);
+    expect(gateway.describe().routes.filter((r) => r.tiers.includes('deep')).map((r) => r.providerId)).toEqual(['anthropic', 'anthropic', 'mac']);
 
     await control.setPurpose('bot.dev', 'fast');
     await gateway.complete({ purpose: 'bot.dev', tier: 'standard', sensitivity: 'public', messages: [] }).catch(() => undefined);

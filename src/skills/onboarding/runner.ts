@@ -3,26 +3,28 @@ import { Contracts } from '../../core/contracts/index.js';
 import type { PluginContext } from '../../core/plugin/types.js';
 import type { SummaryCache } from './cache.js';
 import type { ProfileOutcome, Scratch } from './scratch.js';
-import { errorName, newScratch, stampOf } from './scratch.js';
+import { errorName, newScratch } from './scratch.js';
 import type { OnboardingConfig } from './config.js';
 import { DEEP_LOCAL_FILES, folderStats, itemsFromDrive, itemsFromWalk } from './items.js';
+import { driveReader, listDrive } from './drive-scan.js';
+import { collectActivity } from './activity.js';
+import type { ItemDeps } from './process-item.js';
+import { eachItem, persist, processItem } from './process-item.js';
 import { DEEP_LIMITS, QUICK_LIMITS, listProjectItems } from './project-items.js';
 import type { ScanItem, ScanItemSource } from './items.js';
 import type { OnboardingTexts } from './locale.js';
 import type { RunCounts, RunReason, RunStateStore, ScanPhase } from './state.js';
 import type { SignalCollector } from './signals.js';
 import { collectSignals } from './signals.js';
-import { summarizeItem } from './summarize.js';
 import { buildProfile, startReview } from './profile-phase.js';
 import { displayOf, repoBody, richText, RICH_CHARS } from './bodies.js';
-import { feedTalent } from './talent-feed.js';
-import { countItem, factsOf, waitForModel } from './scratch.js';
+import { factsOf, waitForModel } from './scratch.js';
 import { offerSuggestions } from './suggest.js';
 
 export type ProgressEvent =
   | { phase: ScanPhase; done: number; total: number }
   | { failed: 'model_unavailable' }
-  | { finished: { counts: RunCounts; added: number; retired: number } };
+  | { finished: { counts: RunCounts; added: number; retired: number; pending?: number; found?: { people: number; units: number; routines: number } } };
 
 export interface OnboardingRunnerDeps {
   ctx: PluginContext;
@@ -34,9 +36,10 @@ export interface OnboardingRunnerDeps {
   onProgress: (event: ProgressEvent) => void;
 }
 
-/** The deep first look summarizes this many items in one run; later daily runs only see what changed. */
-const DEEP_SUMMARIES = 8_000;
-const DEEP_DRIVE = 500;
+/** The deep first look summarizes this many items in one run; what is left continues in the next run. */
+const DEEP_SUMMARIES = 20_000;
+/** A deep look reads more of each file: org charts and member lists are long. */
+const DEEP_EXCERPT_BYTES = 40_000;
 
 /** The first-run scan: folders, Drive, connected signals, then one synthesized profile. */
 export class OnboardingRunner {
@@ -71,8 +74,9 @@ export class OnboardingRunner {
       await this.deps.cache.save();
 
       await this.deps.state.finish(this.deps.ctx.clock.now().toISOString(), scratch.counts, outcome.first);
+      await this.deps.state.setPending(scratch.pending);
       this.deps.onProgress({
-        finished: { counts: { ...scratch.counts }, added: outcome.added, retired: outcome.retired },
+        finished: { counts: { ...scratch.counts }, added: outcome.added, retired: outcome.retired, pending: scratch.pending, ...(outcome.found !== undefined ? { found: outcome.found } : {}) },
       });
     } catch (error) {
       if (scratch.signal.aborted) {
@@ -113,13 +117,22 @@ export class OnboardingRunner {
       if (item.kind === 'repo') return repoBody(item, await scan.repo(item.id));
       if (!item.readable) return undefined;
       if (item.rich === true) return await richText(this.deps.ctx, scan, item.id, RICH_CHARS);
-      return await scan.excerpt(item.id, this.deps.config.excerptBytes);
+      return await scan.excerpt(item.id, this.excerptBytes);
     };
     await this.processItems(scratch, phase, 'local', items, readBody);
   }
 
   private get deep(): boolean {
     return this.deps.config.depth === 'deep';
+  }
+
+  private get excerptBytes(): number {
+    return this.deep ? Math.max(this.deps.config.excerptBytes, DEEP_EXCERPT_BYTES) : this.deps.config.excerptBytes;
+  }
+
+  private get itemDeps(): ItemDeps {
+    const cap = this.deep ? Math.max(this.deps.config.maxSummariesPerRun, DEEP_SUMMARIES) : this.deps.config.maxSummariesPerRun;
+    return { ctx: this.deps.ctx, cache: this.deps.cache, state: this.deps.state, texts: this.deps.texts, cap };
   }
 
   /** The chosen folders plus every picked project, so a project known only from its sessions is read too. */
@@ -157,17 +170,23 @@ export class OnboardingRunner {
     const phase: ScanPhase = 'drive';
     await this.deps.state.setPhase(phase);
     const drive = this.deps.ctx.tryUse(Contracts.filesDrive);
-    if (!this.deps.config.drive || drive?.recent === undefined || this.deps.config.driveLimit <= 0) {
+    if (!this.deps.config.drive || drive === undefined || this.deps.config.driveLimit <= 0) {
       this.deps.onProgress({ phase, done: 0, total: 0 });
       return;
     }
-
-    const entries = await drive.recent({ limit: this.deep ? Math.max(this.deps.config.driveLimit, DEEP_DRIVE) : this.deps.config.driveLimit });
+    if (!this.deep) {
+      if (drive.recent === undefined) return this.deps.onProgress({ phase, done: 0, total: 0 });
+      const entries = await drive.recent({ limit: this.deps.config.driveLimit });
+      scratch.driveScanned = true;
+      const readBody = async (item: ScanItem): Promise<string | undefined> => (item.readable ? await drive.readText(item.id, this.excerptBytes) : undefined);
+      await this.processItems(scratch, phase, 'drive', itemsFromDrive(entries), readBody);
+      return;
+    }
+    // Every file of every connected account; the bar shows the listing grow before reading starts.
+    const listing = await listDrive(this.deps.ctx, scratch.signal, (count) => this.deps.onProgress({ phase, done: 0, total: count }));
+    if (scratch.signal.aborted) return;
     scratch.driveScanned = true;
-    const items = itemsFromDrive(entries);
-    const readBody = async (item: ScanItem): Promise<string | undefined> =>
-      item.readable ? await drive.readText(item.id, this.deps.config.excerptBytes) : undefined;
-    await this.processItems(scratch, phase, 'drive', items, readBody);
+    await this.processItems(scratch, phase, 'drive', listing.items, driveReader(this.deps.ctx, listing, this.excerptBytes));
   }
 
   private async scanSignals(scratch: Scratch): Promise<void> {
@@ -178,7 +197,9 @@ export class OnboardingRunner {
       return;
     }
     scratch.signals = await collectSignals(this.deps.collectors, this.deps.ctx, this.deps.ctx.clock.now(), this.deps.ctx.log);
-    scratch.counts.signals = scratch.signals.length;
+    // Six months of mail and the calendar: who the owner works with, and what keeps coming back.
+    scratch.activity = await collectActivity(this.deps.ctx, this.deps.ctx.clock.now(), scratch.signal);
+    scratch.counts.signals = scratch.signals.length + scratch.activity.mails.length + scratch.activity.events.length;
     await this.deps.state.setCounts(scratch.counts);
     this.deps.onProgress({ phase, done: scratch.signals.length, total: scratch.signals.length });
   }
@@ -192,111 +213,20 @@ export class OnboardingRunner {
   ): Promise<void> {
     const total = items.length;
     this.deps.onProgress({ phase, done: 0, total });
+    const deps = this.itemDeps;
+    let done = 0;
     let step = 0;
-    for (let index = 0; index < items.length; index += 1) {
-      if (scratch.signal.aborted) return;
-      const item = items[index];
-      if (item === undefined) continue;
-      await this.processItem(scratch, source, item, readBody);
-      const done = index + 1;
+    await eachItem(items, scratch.signal, async (item) => {
+      await processItem(deps, scratch, source, item, readBody);
+      done += 1;
       // One event per percent at most: the live bar moves smoothly, a huge folder does not flood listeners.
       const reached = total === 0 ? 0 : Math.floor((done / total) * 100);
       if (reached > step) {
         step = reached;
         this.deps.onProgress({ phase, done, total });
       }
-    }
-  }
-
-  private async processItem(
-    scratch: Scratch,
-    source: ScanItemSource,
-    item: ScanItem,
-    readBody: (item: ScanItem) => Promise<string | undefined>,
-  ): Promise<void> {
-    if (source === 'local') scratch.seenLocal.add(item.id);
-    else if (source === 'project') scratch.seenProject.add(item.id);
-    else scratch.seenDrive.add(item.id);
-    countItem(scratch, item);
-
-    const stamp = stampOf(item);
-    const cached = this.deps.cache.get(source, item.id);
-    if (cached !== undefined && cached.stamp === stamp) {
-      scratch.summaries.set(`${source}:${item.id}`, item.project !== undefined ? { ...cached, project: item.project } : cached);
-      await this.persist(scratch);
-      await feedTalent(this.deps.ctx, item, cached.docType, undefined, readBody);
-      return;
-    }
-
-    const cap = this.deep ? Math.max(this.deps.config.maxSummariesPerRun, DEEP_SUMMARIES) : this.deps.config.maxSummariesPerRun;
-    const skipModel = scratch.modelStopped || scratch.modelCalls >= cap;
-    let summary = item.title;
-    let keywords: string[] = [];
-    let docType: string | undefined;
-    let read: string | undefined;
-    let storedStamp = stamp;
-
-    if (item.readable && !skipModel) {
-      let body: string | undefined;
-      try {
-        body = await readBody(item);
-      } catch (error) {
-        this.deps.ctx.log.warn('onboarding: an item could not be read', {
-          kind: item.kind,
-          error: errorName(error),
-        });
-        body = undefined;
-        // A failed read is kept without the stamp, like a model-stopped summary, so a later run reads it again.
-        storedStamp = '';
-      }
-      read = body;
-      if (body === undefined) {
-        summary = item.title;
-      } else {
-        scratch.modelCalls += 1;
-        scratch.counts.summarized += 1;
-        const result = await summarizeItem(
-          { llm: this.deps.ctx.llm, log: this.deps.ctx.log },
-          { kind: item.kind, title: item.title, path: item.path },
-          body,
-          this.deps.texts,
-        );
-        summary = result.summary;
-        keywords = result.keywords;
-        docType = result.docType;
-        if (result.modelStopped) {
-          scratch.modelStopped = true;
-          scratch.modelBroken ||= result.modelBroken === true;
-          storedStamp = '';
-        } else {
-          scratch.modelOk += 1;
-        }
-      }
-    } else if (item.readable) {
-      // Over the per-run cap: keep metadata only, without the stamp, so a later run summarizes it.
-      storedStamp = '';
-    }
-
-    this.deps.cache.put(source, item.id, {
-      stamp: storedStamp,
-      kind: item.kind,
-      path: item.path,
-      title: item.title,
-      modifiedAt: item.modifiedAt,
-      summary,
-      keywords,
-      ...(item.project !== undefined ? { project: item.project } : {}),
-      ...(docType !== undefined ? { docType } : {}),
-    });
-    await feedTalent(this.deps.ctx, item, docType, read, readBody);
-    const record = this.deps.cache.get(source, item.id);
-    if (record !== undefined) scratch.summaries.set(`${source}:${item.id}`, record);
-    await this.persist(scratch);
-  }
-
-  private async persist(scratch: Scratch): Promise<void> {
-    await this.deps.cache.save();
-    await this.deps.state.setCounts(scratch.counts);
+    }, () => scratch.modelOk > 0 || scratch.modelStopped);
+    await persist(deps, scratch, true);
   }
 
   private async profile(scratch: Scratch, reason: RunReason): Promise<ProfileOutcome> {
@@ -310,6 +240,7 @@ export class OnboardingRunner {
       state: this.deps.state,
       texts: this.deps.texts,
       input: { summaries: [...scratch.summaries.values()], stats, signals: scratch.signals },
+      ...(scratch.activity !== undefined ? { activity: scratch.activity } : {}),
       daily: reason === 'daily',
       now,
       picked: this.deps.config.projects,
@@ -326,7 +257,7 @@ export class OnboardingRunner {
       // Cards wait for the owner's answer; the run does not.
       void offerSuggestions(this.deps.ctx, factsOf(scratch), this.deps.ctx.assistant.language !== 'en').catch(() => undefined);
     }
-    return { added: outcome.added, retired: outcome.retired, first };
+    return { added: outcome.added, retired: outcome.retired, first, ...(outcome.found !== undefined ? { found: outcome.found } : {}) };
   }
 
 }

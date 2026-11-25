@@ -20,6 +20,7 @@ export interface GoogleDriveConnectorOptions {
 interface DriveRequests {
   request: GoogleRequestFn;
   requestText: (url: string, init?: RequestInit) => Promise<string>;
+  requestBytes: (url: string) => Promise<Uint8Array>;
 }
 
 const MAX_ALLOWED_BYTES = 5_000_000;
@@ -34,11 +35,11 @@ const configSchema = z.object({
 const defaultSleep = (ms: number): Promise<void> => new Promise((resolve) => setTimeout(resolve, ms));
 
 /** Text bodies (export, alt=media) cannot go through the JSON helper in http.ts. */
-async function textRequest(
+async function bodyRequest(
   deps: { fetch: typeof fetch; tokens: GoogleTokenSource; sleep: (ms: number) => Promise<void> },
   url: string,
   given: RequestInit = {},
-): Promise<string> {
+): Promise<Response> {
   const init = withScopedSignal(given);
   const signal = init.signal ?? undefined;
   let refreshed = false;
@@ -59,7 +60,7 @@ async function textRequest(
       continue;
     }
     if (!response.ok) throw new Error(`Google Drive request failed (HTTP ${response.status})`);
-    return await response.text();
+    return response;
   }
 }
 
@@ -70,7 +71,8 @@ function requestsFor(ctx: PluginContext, opts: GoogleDriveConnectorOptions, key 
   return {
     request: <T>(url: string, init?: RequestInit): Promise<T> =>
       googleRequest<T>({ fetch: fetchImpl, tokens, sleep }, url, init),
-    requestText: (url, init) => textRequest({ fetch: fetchImpl, tokens, sleep }, url, init),
+    requestText: async (url, init) => await (await bodyRequest({ fetch: fetchImpl, tokens, sleep }, url, init)).text(),
+    requestBytes: async (url) => new Uint8Array(await (await bodyRequest({ fetch: fetchImpl, tokens, sleep }, url)).arrayBuffer()),
   };
 }
 
@@ -104,6 +106,7 @@ export function googleDriveConnector(opts: GoogleDriveConnectorOptions = {}): Pl
         new GoogleDriveFiles({
           request: requests.request,
           requestText: requests.requestText,
+          requestBytes: requests.requestBytes,
           rules,
           folderIds,
           log: ctx.log,
@@ -117,7 +120,7 @@ export function googleDriveConnector(opts: GoogleDriveConnectorOptions = {}): Pl
         void readAccountList(ctx.secrets).then((list) => {
           for (const account of list.extra) {
             const own = requestsFor(ctx, opts, account.key);
-            registry.register(new GoogleDriveFiles({ request: own.request, requestText: own.requestText, rules, folderIds: [], log: ctx.log, label: `drive:${account.key}`, title: `Google Drive · ${accountLabel(account)}` }));
+            registry.register(new GoogleDriveFiles({ request: own.request, requestText: own.requestText, requestBytes: own.requestBytes, rules, folderIds: [], log: ctx.log, label: `drive:${account.key}`, title: `Google Drive · ${accountLabel(account)}` }));
           }
         }, () => undefined);
       });

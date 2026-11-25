@@ -196,8 +196,8 @@ export async function triageOnce(ctx: PluginContext, config: TriageConfig, now: 
     if (triage.importance === 'normal') {
       digest.items.push({ who: senderName(message.from), subject: message.subject || texts.noSubject, summary: triage.summary });
     }
-    const intent = intents.some((item) => item.id === triage.kind);
-    if (triage.importance !== 'low' && (triage.actions.length > 0 || intent)) offers.push({ message, triage });
+    // any mail worth knowing gets its card; one with nothing to do (no reply, files, meeting or to-do) asks nothing
+    if (triage.importance !== 'low') offers.push({ message, triage });
     if (organize && triage.importance === 'low' && triage.actions.length === 0 && archivable(message, quiet, true)) {
       toArchive.push(archiveCandidate(message));
     }

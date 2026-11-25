@@ -16,6 +16,8 @@ export const routineScheduleSchema = z.discriminatedUnion('kind', [
   z.object({ kind: z.literal('daily'), at }),
   z.object({ kind: z.literal('weekly'), day: z.enum(WEEKDAYS), at }),
   z.object({ kind: z.literal('every'), hours: z.number().int().min(1).max(24) }),
+  /** day 1..31, or -1 for the last day (monthly closing); a month without that day runs on its last day. */
+  z.object({ kind: z.literal('monthly'), day: z.number().int().min(-1).max(31).refine((day) => day !== 0, 'day is 1..31 or -1 (last day)'), at }),
 ]);
 export type RoutineSchedule = z.infer<typeof routineScheduleSchema>;
 
@@ -29,6 +31,8 @@ export function scheduleFromText(value: unknown): unknown {
   if (weekly !== null) return { kind: 'weekly', day: weekly[1], at: weekly[2] };
   const every = /^every\s+(\d{1,2})\s*(?:h|hours?)$/.exec(text);
   if (every !== null) return { kind: 'every', hours: Number(every[1]) };
+  const monthly = /^monthly\s+(last|\d{1,2})\s+(\d{1,2}:\d\d)$/.exec(text);
+  if (monthly !== null) return { kind: 'monthly', day: monthly[1] === 'last' ? -1 : Number(monthly[1]), at: monthly[2] };
   return value;
 }
 
@@ -40,10 +44,13 @@ export function jobSchedule(schedule: RoutineSchedule): Schedule {
   return { kind: 'daily', at: schedule.at as `${number}:${number}` };
 }
 
-/** Whether a run due at `due` should go ahead (false only for a weekly routine on another day). */
+/** Whether a run due at `due` should go ahead (false for a weekly or monthly routine on another day). */
 export function dueOn(schedule: RoutineSchedule, due: Date, timeZone: string): boolean {
-  if (schedule.kind !== 'weekly') return true;
-  return wallClock(due, timeZone).weekday.toLowerCase().slice(0, 3) === schedule.day;
+  if (schedule.kind === 'weekly') return wallClock(due, timeZone).weekday.toLowerCase().slice(0, 3) === schedule.day;
+  if (schedule.kind !== 'monthly') return true;
+  const today = wallClock(due, timeZone);
+  const last = new Date(Date.UTC(today.y, today.m, 0)).getUTCDate();
+  return today.d === (schedule.day === -1 ? last : Math.min(schedule.day, last));
 }
 
 const KO_DAYS: Record<Weekday, string> = { mon: '월', tue: '화', wed: '수', thu: '목', fri: '금', sat: '토', sun: '일' };
@@ -60,5 +67,9 @@ function koTime(value: string): string {
 export function scheduleLabel(schedule: RoutineSchedule, korean: boolean): string {
   if (schedule.kind === 'every') return korean ? `${schedule.hours}시간마다` : `Every ${schedule.hours} h`;
   if (schedule.kind === 'daily') return korean ? `매일 ${koTime(schedule.at)}` : `Every day at ${schedule.at}`;
+  if (schedule.kind === 'monthly') {
+    const day = schedule.day === -1 ? (korean ? '말일' : 'the last day') : korean ? `${schedule.day}일` : `day ${schedule.day}`;
+    return korean ? `매월 ${day} ${koTime(schedule.at)}` : `Monthly on ${day} at ${schedule.at}`;
+  }
   return korean ? `매주 ${KO_DAYS[schedule.day]}요일 ${koTime(schedule.at)}` : `Every ${EN_DAYS[schedule.day]} at ${schedule.at}`;
 }

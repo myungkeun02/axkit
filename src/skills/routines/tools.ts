@@ -16,7 +16,7 @@ const addInput = z.object({
   title: z.string().trim().min(1).max(60).describe('Short name the owner sees, e.g. "아침 메일 정리".'),
   instruction: z.string().trim().min(1).max(1000).describe("What to do each time, in the owner's own words, complete enough to do alone."),
   schedule: scheduleInput.describe(
-    'One of {"kind":"daily","at":"09:00"}, {"kind":"weekly","day":"mon","at":"09:00"} (day: mon..sun), {"kind":"every","hours":3} (1-24). Times are 24h in the owner\'s time zone.',
+    'One of {"kind":"daily","at":"09:00"}, {"kind":"weekly","day":"mon","at":"09:00"} (day: mon..sun), {"kind":"monthly","day":25,"at":"09:00"} (day 1-31, -1 = last day), {"kind":"every","hours":3} (1-24). Times are 24h in the owner\'s time zone.',
   ),
   bot: z.string().regex(BOT_ID).optional().describe('Bot id when a specialist bot (or its team) should do it.'),
 });

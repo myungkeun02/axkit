@@ -18,7 +18,13 @@ const HALF_LIFE_DAYS = 90;
  * Remembers what the files attached to a mail say (amounts, dates, terms, decisions), so a later "그 견적서 얼마였지?"
  * has an answer. One cheap masked request per file; a file this Mac cannot read is skipped.
  */
-export async function rememberAttachments(ctx: PluginContext, message: MailMessage, run: ProcessRunner = nodeProcessRunner): Promise<number> {
+export interface AttachmentNote {
+  filename: string;
+  summary: string;
+}
+
+/** `notes`, when given, also collects each file's summary (for the owner's "첨부 요약" choice). */
+export async function rememberAttachments(ctx: PluginContext, message: MailMessage, run: ProcessRunner = nodeProcessRunner, notes?: AttachmentNote[]): Promise<number> {
   const reader = ctx.tryUse(Contracts.mailAttachments);
   const memory = ctx.tryUse(Contracts.memoryWrite);
   if (reader === undefined || memory === undefined) return 0;
@@ -55,6 +61,7 @@ export async function rememberAttachments(ctx: PluginContext, message: MailMessa
       const line = korean
         ? `${senderName(message.from)}님이 ${day}에 보낸 첨부 "${file.filename}": ${parsed.data.summary.trim()}`
         : `${senderName(message.from)} sent "${file.filename}" on ${day}: ${parsed.data.summary.trim()}`;
+      notes?.push({ filename: file.filename, summary: parsed.data.summary.trim() });
       await memory.remember({ subject: 'owner', text: line, source: { kind: 'mail', ref: message.id }, halfLifeDays: HALF_LIFE_DAYS });
       kept += 1;
     } catch (error) {

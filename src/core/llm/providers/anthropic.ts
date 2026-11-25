@@ -30,6 +30,11 @@ function buildSystem(messages: readonly ChatMessage[], schema: Record<string, un
   return parts.join('\n\n');
 }
 
+/** Models whose thinking cannot be turned off (Claude 5 generation): effort is the only control. */
+const THINKING_MODEL = /claude-(fable|mythos|opus|sonnet|haiku)-5/;
+const EFFORT: Record<LlmRequest['tier'], 'low' | 'medium' | 'high'> = { cheap: 'low', fast: 'low', standard: 'medium', deep: 'high' };
+const THINKING_ROOM: Record<LlmRequest['tier'], number> = { cheap: 1_024, fast: 1_024, standard: 4_096, deep: 8_192 };
+
 export function createAnthropicProvider(opts: AnthropicOptions): LlmProvider {
   const baseUrl = (opts.baseUrl ?? 'https://api.anthropic.com').replace(/\/+$/, '');
   const doFetch = opts.fetch ?? fetch;
@@ -43,10 +48,14 @@ export function createAnthropicProvider(opts: AnthropicOptions): LlmProvider {
       const messages = request.messages
         .filter((message) => message.role !== 'system')
         .map((message) => ({ role: message.role, content: message.content }));
+      const thinks = THINKING_MODEL.test(model);
       const body: Record<string, unknown> = {
         model,
-        max_tokens: request.maxOutputTokens ?? 1024,
+        // these models always think first, and thinking counts toward max_tokens: room for it keeps the answer whole
+        max_tokens: (request.maxOutputTokens ?? 1024) + (thinks ? THINKING_ROOM[request.tier] : 0),
         messages,
+        // how hard to think follows the tier: quick jobs stay quick and cheap
+        ...(thinks ? { output_config: { effort: EFFORT[request.tier] } } : {}),
       };
       if (system.length > 0) body.system = system;
 
@@ -62,6 +71,8 @@ export function createAnthropicProvider(opts: AnthropicOptions): LlmProvider {
         return (await response.json()) as unknown;
       });
       if (!isRecord(data)) throw new Error('Malformed response from LLM provider');
+      // a declined request has no usable text: the gateway moves on to the next route
+      if (data.stop_reason === 'refusal') throw new Error('The model declined this request (refusal).');
       const blocks = Array.isArray(data.content) ? data.content : [];
       let text = '';
       for (const block of blocks) {

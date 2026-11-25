@@ -34,10 +34,27 @@ export interface FirstLookResult {
       name: string;
       purpose: string;
       team: { kind: 'dev' | 'general'; roles: { title: string; does: string }[] };
-      routines: { title: string; when: string; schedule: TeamPlan['teams'][number]['routines'][number]['schedule'] }[];
+      routines: ResultRoutine[];
+      /** A real department or team: its lead, members and the unit above it. */
+      unit?: NonNullable<TeamPlan['teams'][number]['unit']>;
     }[];
   }[];
+  /** Recurring work the main assistant takes on (it belongs to no team). */
+  routines?: ResultRoutine[];
   plan: { id: string; status: TeamPlan['status'] } | null;
+}
+
+type PlannedRoutine = TeamPlan['teams'][number]['routines'][number];
+
+interface ResultRoutine {
+  title: string;
+  when: string;
+  schedule: PlannedRoutine['schedule'];
+  evidence?: string[];
+}
+
+function resultRoutine(routine: PlannedRoutine, korean: boolean): ResultRoutine {
+  return { title: routine.title, when: scheduleText(routine.schedule, korean), schedule: routine.schedule, ...(routine.evidence !== undefined ? { evidence: [...routine.evidence] } : {}) };
 }
 
 export interface RevisionOutcome {
@@ -99,10 +116,12 @@ export class FirstLookFlow {
           name: team.name,
           purpose: team.purpose,
           team: { kind: team.kind, roles: team.roles.map((role) => ({ ...role })) },
-          routines: team.routines.map((routine) => ({ title: routine.title, when: scheduleText(routine.schedule, this.deps.korean), schedule: routine.schedule })),
+          routines: team.routines.map((routine) => resultRoutine(routine, this.deps.korean)),
+          ...(team.unit !== undefined ? { unit: { ...team.unit, members: [...team.unit.members] } } : {}),
         })),
     }));
-    return { about, companies, plan: plan === undefined ? null : { id: plan.id, status: plan.status } };
+    const routines = (plan?.routines ?? []).map((routine) => resultRoutine(routine, this.deps.korean));
+    return { about, companies, routines, plan: plan === undefined ? null : { id: plan.id, status: plan.status } };
   }
 
   async read(): Promise<Record<string, unknown>> {

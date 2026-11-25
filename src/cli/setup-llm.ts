@@ -42,34 +42,18 @@ export const LLM_PRESETS: readonly LlmPreset[] = [
     label: 'Anthropic (Claude)',
     apiKeySecret: 'llm.anthropic.api-key',
     providers: [
-      {
-        id: 'anthropic',
-        kind: 'anthropic',
-        apiKeySecret: 'llm.anthropic.api-key',
-        priceIn: 3,
-        priceOut: 15,
-      },
-      {
-        id: 'anthropic-haiku',
-        kind: 'anthropic',
-        apiKeySecret: 'llm.anthropic.api-key',
-        priceIn: 1,
-        priceOut: 5,
-      },
+      // one provider per price, so each model's cost is counted right
+      { id: 'anthropic-fable', kind: 'anthropic', apiKeySecret: 'llm.anthropic.api-key', priceIn: 8, priceOut: 40 },
+      { id: 'anthropic-opus', kind: 'anthropic', apiKeySecret: 'llm.anthropic.api-key', priceIn: 4, priceOut: 20 },
+      { id: 'anthropic', kind: 'anthropic', apiKeySecret: 'llm.anthropic.api-key', priceIn: 2, priceOut: 10 },
+      { id: 'anthropic-haiku', kind: 'anthropic', apiKeySecret: 'llm.anthropic.api-key', priceIn: 0.1, priceOut: 0.5 },
     ],
     routes: [
-      {
-        providerId: 'anthropic',
-        model: 'claude-sonnet-4-5',
-        tiers: ['standard', 'deep'],
-        maxSensitivity: 'sensitive',
-      },
-      {
-        providerId: 'anthropic-haiku',
-        model: 'claude-haiku-4-5',
-        tiers: ['fast'],
-        maxSensitivity: 'sensitive',
-      },
+      // S: the hardest work (self-improvement, long plans); Opus behind it if Fable is unavailable to the key
+      { providerId: 'anthropic-fable', model: 'claude-fable-5-2', tiers: ['deep'], maxSensitivity: 'sensitive' },
+      { providerId: 'anthropic-opus', model: 'claude-opus-5-5', tiers: ['deep'], maxSensitivity: 'sensitive' },
+      { providerId: 'anthropic', model: 'claude-sonnet-5-5', tiers: ['standard'], maxSensitivity: 'sensitive' },
+      { providerId: 'anthropic-haiku', model: 'claude-haiku-5-5', tiers: ['fast', 'cheap'], maxSensitivity: 'sensitive' },
     ],
   },
   {
@@ -144,10 +128,11 @@ export const LLM_PRESETS: readonly LlmPreset[] = [
     label: 'Claude Code 구독 (claude CLI)',
     providers: [{ id: 'claude-cli', kind: 'claude-cli', command: 'claude', priceIn: 0, priceOut: 0 }],
     routes: [
+      { providerId: 'claude-cli', model: 'opus', tiers: ['deep'], maxSensitivity: 'sensitive' },
       {
         providerId: 'claude-cli',
         model: 'sonnet',
-        tiers: ['standard', 'deep'],
+        tiers: ['standard'],
         maxSensitivity: 'sensitive',
       },
       {

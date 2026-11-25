@@ -15,6 +15,9 @@ import { projectsView } from './projects-view.js';
 import { ProgressTracker } from './progress.js';
 
 const JOB_NAME = 'onboarding.daily';
+const RESUME_JOB = 'onboarding.resume';
+/** A big Drive is read over several runs: an hour after one ends with files left, the next picks up from the cache. */
+const RESUME_SECONDS = 3_600;
 const ROOM_LIMIT = 200;
 
 function errorName(error: unknown): string {
@@ -190,6 +193,16 @@ export function onboardingSkill(): Plugin {
         async run() {
           if (state.current.firstDoneAt === undefined) return;
           if (running !== undefined) return;
+          start('daily');
+        },
+      });
+
+      ctx.scheduler.add({
+        name: RESUME_JOB,
+        schedule: { kind: 'every', seconds: RESUME_SECONDS },
+        async run() {
+          const current = state.current;
+          if (running !== undefined || current.status !== 'done' || (current.pending ?? 0) === 0) return;
           start('daily');
         },
       });

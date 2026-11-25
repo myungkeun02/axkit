@@ -1,7 +1,7 @@
 import type { MailMessage } from './mail.js';
 
 /** Kinds every owner's mail falls into; packs add their own (§ talent: hiring requests, applications). */
-export const BASE_MAIL_KINDS = ['question', 'document_request', 'scheduling', 'introduction', 'notice', 'other'] as const;
+export const BASE_MAIL_KINDS = ['question', 'document_request', 'scheduling', 'introduction', 'invitation', 'notice', 'other'] as const;
 
 export interface MailIntent {
   /** snake_case, unique: "hiring_request". */

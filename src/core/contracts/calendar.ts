@@ -14,6 +14,8 @@ export interface CalendarEvent {
   account?: string;
   /** The calendar it is on (its name), when the owner has more than one. */
   calendar?: string;
+  /** The video meeting link (Google Meet and the like), when the event has one. */
+  meetLink?: string;
 }
 
 /** One of the owner's calendars (Google: those checked in the calendar list). */

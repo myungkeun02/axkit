@@ -4,6 +4,7 @@ import { fileVerdict, isSensitivePath } from '../../core/files/filter.js';
 import type { Logger } from '../../core/log/types.js';
 import type { GoogleRequestFn } from './http.js';
 import { isRecord } from './json.js';
+import { everythingPage, fileBytes } from './drive-all.js';
 
 const DRIVE_BASE = 'https://www.googleapis.com/drive/v3/files';
 const FOLDER_MIME = 'application/vnd.google-apps.folder';
@@ -36,6 +37,8 @@ export interface GoogleDriveFilesOptions {
   request: GoogleRequestFn;
   /** Fetches a body as plain text (export or alt=media). */
   requestText: (url: string, init?: RequestInit) => Promise<string>;
+  /** Fetches a body as bytes (alt=media), for PDF and Word files converted on this Mac. */
+  requestBytes?: (url: string) => Promise<Uint8Array>;
   rules: FileRules;
   folderIds: readonly string[];
   log: Logger;
@@ -130,10 +133,21 @@ export class GoogleDriveFiles implements FileSource {
     return found.slice(0, opts.limit);
   }
 
+  /** Every file the account can open (own, shared, shared drives), a page at a time. */
+  async everything(opts: { pageToken?: string; pageSize?: number }): Promise<{ entries: FileEntry[]; next?: string }> {
+    return await everythingPage(this.deps.request, this.deps.rules.exclude, opts);
+  }
+
+  async readBytes(id: string, maxBytes: number): Promise<Uint8Array> {
+    const requestBytes = this.deps.requestBytes;
+    if (requestBytes === undefined) throw new Error('This Drive cannot download files.');
+    return await fileBytes(this.deps.request, requestBytes, this.deps.rules.exclude, id, maxBytes);
+  }
+
   async readText(id: string, maxBytes: number): Promise<string> {
     if (maxBytes <= 0) return '';
     const meta = await this.deps.request<{ id?: unknown; name?: unknown; mimeType?: unknown }>(
-      `${DRIVE_BASE}/${encodeURIComponent(id)}?fields=id,name,mimeType`,
+      `${DRIVE_BASE}/${encodeURIComponent(id)}?fields=id,name,mimeType&supportsAllDrives=true`,
     );
     const name = typeof meta.name === 'string' ? meta.name : '';
     if (isSensitivePath(name, this.deps.rules.exclude)) {
@@ -154,7 +168,7 @@ export class GoogleDriveFiles implements FileSource {
       throw new Error('The file type is not allowed by the current file rules.');
     }
     return truncateBytes(
-      await this.deps.requestText(`${DRIVE_BASE}/${encodeURIComponent(id)}?alt=media`),
+      await this.deps.requestText(`${DRIVE_BASE}/${encodeURIComponent(id)}?alt=media&supportsAllDrives=true`),
       maxBytes,
     );
   }
@@ -167,6 +181,7 @@ export class GoogleDriveFiles implements FileSource {
   private exportUrl(id: string, mimeType: string): string {
     const url = new URL(`${DRIVE_BASE}/${encodeURIComponent(id)}/export`);
     url.searchParams.set('mimeType', mimeType);
+    url.searchParams.set('supportsAllDrives', 'true');
     return url.toString();
   }
 

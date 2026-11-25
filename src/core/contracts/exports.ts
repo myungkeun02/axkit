@@ -66,6 +66,7 @@ export type {
   PersonInteraction,
   PersonCommitment,
   PersonSummary,
+  PersonProfile,
   PeopleReader,
   PeopleWriter,
   FactExpired,
@@ -136,6 +137,7 @@ export type {
   ScanResult,
   KnowledgeWriter,
 } from './knowledge.js';
+export type { OrgUnit, ProposedSchedule, RoutineProposal } from './org.js';
 export type { ReviewItem, ReviewRequest, OwnerReview, ReviewAnswer } from './review.js';
 export type { ScannedFile, ScannedRepo, RepoCommit, RepoDetails, FolderWalk, FolderScan, FolderScanner } from './scan.js';
 export type { RemoteInfo, RemoteFoundFile, RemoteSource, RemoteSourceDirectory } from './remote.js';

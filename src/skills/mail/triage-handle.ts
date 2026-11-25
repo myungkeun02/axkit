@@ -9,6 +9,9 @@ import type { FoundDoc } from './draft-context.js';
 import { writeDraft } from './draft-writer.js';
 import { needsReply } from './safety.js';
 import { rememberAttachments } from './attachment-memory.js';
+import type { AttachmentNote } from './attachment-memory.js';
+import { askAboutMail } from './triage-ask.js';
+import { meetLinkIn } from '../../core/text/meet-link.js';
 import { recordDraft } from './draft-outcomes.js';
 import type { TriageTexts } from './triage-locale.js';
 import { senderName } from './triage-locale.js';
@@ -35,7 +38,8 @@ async function tell(ctx: PluginContext, text: string, dedupeKey: string): Promis
  */
 export async function handleMail(ctx: PluginContext, message: MailMessage, triage: Triage, texts: TriageTexts, options: HandleOptions): Promise<void> {
   // what the attached files say is kept, so a later question about them has an answer
-  await rememberAttachments(ctx, message).catch(() => 0);
+  const notes: AttachmentNote[] = [];
+  await rememberAttachments(ctx, message, undefined, notes).catch(() => 0);
   const intent = options.intents.find((item) => item.id === triage.kind);
   if (intent?.handle !== undefined) {
     try {
@@ -49,7 +53,17 @@ export async function handleMail(ctx: PluginContext, message: MailMessage, triag
   const wanted = needsReply(message, triage.kind);
   const actions = wanted ? triage.actions : triage.actions.filter((action) => action.kind !== 'reply');
   const reply = actions.find((action): action is ReplySuggestion => action.kind === 'reply');
-  if (!options.autoDraft || reply === undefined) {
+  if (!options.autoDraft) {
+    // first what came, then the owner picks what to do; nothing is written before that
+    const meetLink = meetLinkIn(`${message.subject}\n${message.body === '' ? message.snippet : message.body}`);
+    await askAboutMail(
+      ctx,
+      { message, triage, actions, notes, ...(meetLink !== undefined ? { meetLink } : {}), draft: (chosen) => draftNow(ctx, message, triage, chosen, intent, texts) },
+      texts,
+    );
+    return;
+  }
+  if (reply === undefined) {
     await offerSuggestions(ctx, message, actions, texts);
     return;
   }

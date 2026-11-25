@@ -7,6 +7,8 @@ import type { RunStateStore } from './state.js';
 import { synthesize } from './synthesize.js';
 import { buildHierarchy, mergeHierarchy } from './hierarchy.js';
 import type { PickedProject } from './projects.js';
+import type { Activity } from './activity.js';
+import { buildOrg } from './org-phase.js';
 
 export interface ProfileStep {
   ctx: PluginContext;
@@ -19,6 +21,8 @@ export interface ProfileStep {
   picked?: readonly PickedProject[];
   display?: (path: string) => string;
   onProject?: (done: number, total: number) => void;
+  /** Mail and calendar of the signals phase: people, teams and recurring work come from these and the documents. */
+  activity?: Activity;
 }
 
 export interface ProfileStepOutcome {
@@ -26,6 +30,8 @@ export interface ProfileStepOutcome {
   saved: boolean;
   added: number;
   retired: number;
+  /** People cards, org units and routine proposals the run found. */
+  found?: { people: number; units: number; routines: number };
 }
 
 /** Everything the profile is built from; the same inputs would give the same profile. */
@@ -54,12 +60,14 @@ export async function buildProfile(step: ProfileStep): Promise<ProfileStepOutcom
     resumes === 0
       ? step.input
       : { ...step.input, summaries: step.input.summaries.filter((summary) => summary.docType !== 'resume'), stats: [...step.input.stats, step.texts.resumeStat(resumes)] };
+  // Files known only by name (spreadsheets and slides with no converter) feed the recurring-work search, not the profile.
+  const read = { ...input, summaries: input.summaries.filter((summary) => summary.kind !== 'file' || summary.summary !== summary.title || summary.keywords.length > 0) };
   const picked = step.picked ?? [];
   // Even with nothing picked, the work map makes companies and projects out of the folders.
   const hierarchy =
-    picked.length === 0 && input.summaries.length === 0
+    picked.length === 0 && read.summaries.length === 0
       ? undefined
-      : await buildHierarchy(picked, input, {
+      : await buildHierarchy(picked, read, {
           llm: step.ctx.llm,
           log: step.ctx.log,
           texts: step.texts,
@@ -67,7 +75,7 @@ export async function buildProfile(step: ProfileStep): Promise<ProfileStepOutcom
           display: step.display ?? ((path) => path),
           ...(step.onProject !== undefined ? { onProject: step.onProject } : {}),
         });
-  const overall = await synthesize({ llm: step.ctx.llm, log: step.ctx.log }, hierarchy?.input ?? input, step.texts, step.now);
+  const overall = await synthesize({ llm: step.ctx.llm, log: step.ctx.log }, hierarchy?.input ?? read, step.texts, step.now);
   const synthesis = hierarchy === undefined ? overall : { ...overall, result: mergeHierarchy(overall.result, hierarchy) };
   if (synthesis.by === 'code' && previous.profileBy === 'model') {
     step.ctx.log.info('onboarding: kept the model-written profile; this run only had the code fallback');
@@ -79,9 +87,11 @@ export async function buildProfile(step: ProfileStep): Promise<ProfileStepOutcom
     step.ctx.log.warn('onboarding: no knowledge writer is available; the profile was not saved');
     return none;
   }
-  const counts = await writer.replaceScan(synthesis.result);
+  const org = await buildOrg({ ctx: step.ctx, texts: step.texts, summaries: input.summaries, ...(step.activity !== undefined ? { activity: step.activity } : {}), result: synthesis.result, now: step.now });
+  const result = { ...synthesis.result, profile: [...synthesis.result.profile, ...org.lines], units: org.units, routines: org.routines };
+  const counts = await writer.replaceScan(result);
   await step.state.markProfile(synthesis.by, fingerprint);
-  return { saved: true, ...counts };
+  return { saved: true, ...counts, found: { people: org.people, units: org.units.length, routines: org.routines.length } };
 }
 
 /** The first finished look sends the "제가 이해한 당신" card. */

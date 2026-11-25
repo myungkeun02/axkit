@@ -6,10 +6,11 @@ const triageSchema = z.object({
   /** New mail is looked at this often; only new mail costs a model call. */
   everyMinutes: z.number().int().min(1).max(1440).default(2),
   /**
-   * Reply drafts are written without asking first (a draft stays in the mailbox and can be deleted); only sending asks.
-   * Off: the older "답장 초안을 만들어 둘까요?" card comes first.
+   * On: reply drafts are written without asking first (a draft stays in the mailbox and can be deleted); only sending
+   * asks. Off (the default): the owner first hears what the mail says and picks what to do (reply, read the attached
+   * files, put the meeting on the calendar, make it a to-do).
    */
-  autoDraft: z.boolean().default(true),
+  autoDraft: z.boolean().default(false),
   /** Normal mail is collected and sent as one digest at most this often. */
   digestHours: z.number().min(1).max(24).default(3),
   /** Addresses ("mina@example.com") or domains ("@example.com") triage never looks at. */

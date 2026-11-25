@@ -102,6 +102,11 @@ describe('renderBriefing', () => {
     ]);
   });
 
+  it('names the calendar of each event when there is more than one', () => {
+    const message = render(briefing({ calendar: { state: 'ok', items: [{ ...teamMeeting, calendar: 'biz' }, { ...workshop, calendar: '개인' }] } }));
+    expect(message.text).toContain('일정\n- 09:00 팀 회의 [biz]\n- 종일 워크숍 [개인]');
+  });
+
   it('renders the local date and times in the owner zone', () => {
     const utcMorning: CalendarEvent = {
       id: 'e3',

@@ -1,3 +1,5 @@
+import type { OrgUnit, RoutineProposal } from './org.js';
+
 /** Where a knowledge line came from. Lower ranks never replace a line the owner corrected. */
 /** `file`: learned from a file the owner chose and approved; scans and memory never replace it. */
 export type KnowledgeOrigin = 'scan' | 'memory' | 'file' | 'correction';
@@ -43,6 +45,10 @@ export interface ProfileReader {
 export interface ScanResult {
   profile: readonly KnowledgeLine[];
   projects: readonly KnowledgeLine[];
+  /** Departments and teams found in the documents; the team plan proposes one team per unit. */
+  units?: readonly OrgUnit[];
+  /** Recurring work found with its evidence; the team plan proposes it as routines. */
+  routines?: readonly RoutineProposal[];
 }
 
 /** Capability "knowledge.write". */

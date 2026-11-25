@@ -29,7 +29,8 @@ const AUTOMATED = /^(no[-_.]?reply|do[-_.]?not[-_.]?reply|mailer-daemon|postmast
  * model may still suggest a reply; this decides whether one is written without asking.
  */
 export function needsReply(message: MailMessage, kind: string): boolean {
-  if (kind === 'notice') return false;
+  // a notice or a calendar invitation is not waiting for a written answer
+  if (kind === 'notice' || kind === 'invitation') return false;
   if (message.bulk === true) return false;
   const local = bareAddress(message.from).split('@')[0] ?? '';
   return !AUTOMATED.test(local);

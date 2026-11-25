@@ -7,6 +7,7 @@ import { dayTexts } from './locale.js';
 import { registerPrep } from './prep.js';
 import { registerReplies } from './replies.js';
 import { registerTravel } from './travel.js';
+import { registerMeetLinks } from './meet-reminder.js';
 import { registerVoice } from './voice.js';
 
 /**
@@ -26,6 +27,7 @@ export function daySkill(): Plugin {
 
       if (config.prep) registerPrep(ctx, config.prepAt, texts, config.situational);
       if (config.travel) registerTravel(ctx, config.travelBufferMinutes, texts);
+      if (config.meetLinks) registerMeetLinks(ctx);
       if (config.close) registerClose(ctx, config.closeAt, texts, config.situational);
       if (config.replies) registerReplies(ctx, config.repliesAt, texts);
       if (config.voice) registerVoice(ctx, texts);

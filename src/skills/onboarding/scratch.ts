@@ -4,6 +4,7 @@ import type { ScanItem } from './items.js';
 import type { RunCounts } from './state.js';
 import { zeroCounts } from './state.js';
 import type { SignalLine } from './signals.js';
+import type { Activity } from './activity.js';
 import type { SuggestFacts } from './suggest-catalog.js';
 
 /** What one run carries between its phases. */
@@ -25,12 +26,20 @@ export interface Scratch {
   projectScanned: boolean;
   walk?: FolderWalk;
   signals: SignalLine[];
+  /** Mail and calendar seen in the signals phase, for people, teams and recurring work. */
+  activity?: Activity;
+  /** Readable items left without a summary (over the run's budget, model stopped, a failed read). */
+  pending: number;
+  /** Items handled since the cache was last written; the cache is written in batches. */
+  unsaved: number;
+  savedAt: number;
 }
 
 export interface ProfileOutcome {
   added: number;
   retired: number;
   first: boolean;
+  found?: { people: number; units: number; routines: number };
 }
 
 export function newScratch(signal: AbortSignal): Scratch {
@@ -49,6 +58,9 @@ export function newScratch(signal: AbortSignal): Scratch {
     driveScanned: false,
     projectScanned: false,
     signals: [],
+    pending: 0,
+    unsaved: 0,
+    savedAt: Date.now(),
   };
 }
 
@@ -56,9 +68,12 @@ export function errorName(error: unknown): string {
   return error instanceof Error ? error.name : 'unknown';
 }
 
+/** Bumped when a summary learns to keep more (v2: the people a document names), so every file is read again once. */
+const STAMP_VERSION = 'v2';
+
 /** Changes when the item does; a cached summary with the same stamp is reused. */
 export function stampOf(item: ScanItem): string {
-  return `${item.modifiedAt}|${item.size}`;
+  return `${STAMP_VERSION}|${item.modifiedAt}|${item.size}`;
 }
 
 /** What the run saw, in numbers only, for the feature suggestions. */

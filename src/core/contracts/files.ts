@@ -27,6 +27,13 @@ export interface FileSource {
    */
   recent?(opts: { modifiedAfter?: Date; limit: number }): Promise<FileEntry[]>;
   /**
+   * Every file the source can open, a page at a time, newest first (Drive: the account's own files, files shared with
+   * it and shared drives). Metadata only; the first look walks it to the end so nothing is sampled.
+   */
+  everything?(opts: { pageToken?: string; pageSize?: number }): Promise<{ entries: FileEntry[]; next?: string }>;
+  /** The stored bytes of a file with no text export (PDF, Word), up to `maxBytes`, for conversion on this Mac. */
+  readBytes?(id: string, maxBytes: number): Promise<Uint8Array>;
+  /**
    * The file as `list` would show it now; undefined when it is gone or no longer allowed. Throws when that cannot be
    * told (its folder is not reachable right now), so a caller never drops a file it merely could not see.
    */

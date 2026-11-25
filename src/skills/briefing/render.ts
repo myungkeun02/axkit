@@ -24,9 +24,11 @@ function clockTime(iso: string, timeZone: string): string | undefined {
 }
 
 function eventLine(event: CalendarEvent, texts: BriefingTexts, timeZone: string): string {
-  if (event.allDay) return `${texts.allDay} ${event.title}`;
+  // which calendar it is on, when the owner has more than one
+  const tag = event.calendar !== undefined && event.calendar !== '' ? ` [${event.calendar}]` : '';
+  if (event.allDay) return `${texts.allDay} ${event.title}${tag}`;
   const time = clockTime(event.start, timeZone);
-  return time === undefined ? event.title : `${time} ${event.title}`;
+  return time === undefined ? `${event.title}${tag}` : `${time} ${event.title}${tag}`;
 }
 
 function mailLine(mail: MailSummary): string {

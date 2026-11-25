@@ -1,6 +1,7 @@
 import { createHash } from 'node:crypto';
 import { z } from 'zod';
 import type { KeyValueStore } from '../../core/store/types.js';
+import { MAX_MENTIONS, MentionSchema } from './mentions.js';
 
 export type CachedKind = 'file' | 'repo' | 'drive' | 'doc' | 'session';
 
@@ -16,6 +17,8 @@ const SummarySchema = z.object({
   project: z.string().optional(),
   /** resume, plan, proposal… (summarize.ts DOC_TYPES). */
   docType: z.string().optional(),
+  /** People the document names, for the people cards and the org structure. */
+  people: z.array(MentionSchema).max(MAX_MENTIONS).optional(),
 });
 
 export type CachedSummary = z.infer<typeof SummarySchema>;
@@ -24,8 +27,8 @@ const EntriesSchema = z.record(z.string(), SummarySchema);
 type Entries = z.infer<typeof EntriesSchema>;
 
 const CACHE_KEY = 'summaries';
-/** A deep first look over many projects and their sessions stays within this. */
-const MAX_ENTRIES = 12_000;
+/** Every document of a large Drive and the local folders fits; past this the oldest go first. */
+const MAX_ENTRIES = 60_000;
 
 export function cacheKey(source: string, id: string): string {
   return `${source}:${createHash('sha256').update(id).digest('hex').slice(0, 16)}`;

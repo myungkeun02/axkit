@@ -40,6 +40,8 @@ const StateSchema = z.object({
   /** Hash of everything the last profile was built from; an unchanged daily run skips the model. */
   fingerprint: z.string().optional(),
   counts: CountsSchema.default({ files: 0, repos: 0, drive: 0, summarized: 0, signals: 0, docs: 0, sessions: 0 }),
+  /** Readable files the last run left unread (over its budget); a follow-up run reads them. */
+  pending: z.number().int().nonnegative().optional(),
   error: z.string().optional(),
 });
 
@@ -93,6 +95,12 @@ export class RunStateStore {
 
   async setCounts(counts: RunCounts): Promise<void> {
     this.state.counts = counts;
+    await this.save();
+  }
+
+  async setPending(pending: number): Promise<void> {
+    if (pending > 0) this.state.pending = pending;
+    else delete this.state.pending;
     await this.save();
   }
 

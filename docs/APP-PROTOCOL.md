@@ -714,6 +714,10 @@ Gmail이 연결돼 있으면 기본으로 켜짐. 2분마다 받은편지함의 
 ```
 제안서가 없으면 `{"plan": null}`. `roles`가 그 팀의 직원 봇이 된다(최대 6, `title` 1~20자). 개발팀(`dev`)은 검수 봇이 붙는다. `tasks`는 참고용(일 지도의 반복하는 일), `routines`는 만들 때 그 팀 팀장에게 맡길 루틴(팀마다 최대 5).
 `schedule`은 `{"kind":"daily","at":"HH:MM"}` | `{"kind":"weekly","day":"mon..sun","at":"HH:MM"}` | `{"kind":"every","hours":1..24}`.
+- **2026-11-25 추가(모두 선택 필드)**: 처음 알아보기가 문서·메일 서명·캘린더 참석자로 찾은 **실제 부서·팀**도 팀으로 제안된다. 그런 팀은 `unit: {parent?, lead?, members: [이름…]}`이 붙는다(상위 부서 이름, 리드, 구성원). 팀은 최대 **40개**.
+  `schedule`에 `{"kind":"monthly","day":1..31 | -1(말일),"at":"HH:MM"}`이 더해졌다(월말 결산 등). 루틴에 `evidence: ["캘린더 '주간 회의' 14번 · 매주 월 10:00"]`(최대 5줄, 반복을 보여 준 근거)가 붙을 수 있다.
+  어느 팀 일도 아닌 반복 업무는 `plan.routines`(팀과 같은 루틴 모양, 최대 20개)로 오고, 만들면 봇 없이 비서가 직접 한다. `save`는 `teams`만 바꾸고 `plan.routines`는 그대로 둔다.
+  아직 답하지 않은 제안서는 다음 알아보기가 같은 `id`로 고쳐 쓰고(카드 다시 안 감), 답한 제안서는 새 팀·루틴이 생겼을 때만 새 제안서와 카드가 간다.
 
 ### 24.2 `POST views/team-plan/save` `{ "teams": [ …24.1의 teams 모양 그대로… ] }`
 고친 **전체 목록**을 보낸다(팀 빼기·회사 이름 바꾸기·역할·루틴 고치기 모두 이걸로, 최대 24팀). `status`가 `proposed`일 때만 된다(아니면 400 `no proposed plan`). 답 `{"saved": n}`.
@@ -764,6 +768,7 @@ Gmail이 연결돼 있으면 기본으로 켜짐. 2분마다 받은편지함의 
                                                "routines": [ { "title": "주간 점검", "when": "매주 월 09:00", "schedule": { "kind": "weekly", "day": "mon", "at": "09:00" } } ] } ] } ],
               "plan": { "id": "p…", "status": "proposed|applied|declined" } | null } }
 ```
+- 2026-11-25: `result.routines`(선택) = 비서가 직접 할 반복 업무(§24 `plan.routines`), `projects[].unit`(선택) = 실제 부서·팀이면 §24의 `unit`, 루틴마다 `evidence`(선택).
 - `phases`는 늘 다섯 개, 이 순서(`local`·`projects`·`drive`·`signals`·`profile`). 읽을 것이 없는 단계는 `total: 0`이고 지나가면 `state: "done"`.
   막대는 `percent`(서버가 단계별 무게로 계산, `done`일 때만 100)를 그대로 그리고, 숫자 줄은 `total > 0`인 단계의 `label done/total`을 ` · `로 잇는다. 경과 시간은 `startedAt`(끝났으면 `finishedAt`까지)으로.
 - `paused`: 오너가 멈췄거나 서버가 재시작돼 멈춘 상태("알아보기 계속"으로 이어 감). `failed`면 `error`가 붙는다. `idle`은 아직 한 번도 시작하지 않음.
@@ -837,6 +842,7 @@ Ctrl+C나, 5분 넘게 남았을 때 한 번 묻는 "백그라운드로 두고 �
 주인이 대화에서 "김민수 대표님은 ~야"처럼 알려 준 사람을 **인물 카드**로 남긴다. 메일·캘린더에서 만난 같은 사람(이름·주소)과 한 사람으로 합쳐진다. 카드는 메인 대화와 모든 봇 방이 매번 본다("대표님"이 누군지 다시 묻지 않음).
 
 - `GET views/people` → `{title:"사람", people:[{key, name, names[], title?, company?, relation?, note?, emails(개수), lastSeen?, openCommitments(개수), updatedAt}]}` — 카드가 있는 사람만, 최근에 바뀐 순. `title` 직함·역할, `company` 회사, `relation` 주인과의 관계("내가 일하는 회사 대표"), `note` 특징 몇 줄(줄바꿈 `\n`). 이메일 주소 자체는 주지 않는다.
+- 2026-11-25: 처음 알아보기가 Drive·로컬 문서 전부(조직도·구성원 명단·회의록), 메일 서명·받는 사람, 캘린더 참석자를 읽어 사람 카드를 **직접 채운다**(주인이 고친 칸은 다시 쓰지 않음). 사람마다 `team?`(부서·팀, 60자)이 더해졌고, 응답에 `units: [{org, name, parent?, purpose?, lead?, members: [이름…], sources: [출처…]}]`(조직 구조, 없으면 `[]`)가 붙는다. `edit`도 `team`을 받는다(빈 문자열은 지움, 60자 넘으면 400 "부서·팀은 60자까지 쓸 수 있어요.").
 - `POST views/people/edit {key, title?, company?, relation?, note?}` → `{person}` — 주인이 직접 고침. 준 칸만 바뀌고, 빈 문자열은 그 칸을 지움. 한도: 직함 40·회사 60·관계 80·메모 400자(넘으면 400 `message:"메모는 400자까지 쓸 수 있어요."`처럼 어느 칸인지). 없는 사람은 400 `message:"그런 사람이 없어요."`.
 - 카드 지우기·사람 합치기는 대화로("김민수 카드 지워 줘").
 - 서버가 기능을 알리는 방법: `capabilities.views`에 `people`.

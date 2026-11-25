@@ -1,3 +1,5 @@
+import type { OrgUnit } from './org.js';
+
 export type FactSourceKind = 'chat' | 'interview' | 'mail' | 'calendar' | 'phone' | 'manual';
 
 export interface FactSource {
@@ -80,6 +82,8 @@ export interface PersonProfile {
   /** Job or role: "대표", "PM". */
   title?: string;
   company?: string;
+  /** Their department or team inside the company ("마케팅팀"). */
+  team?: string;
   /** What they are to the owner: "내가 일하는 회사 대표", "거래처 담당자". */
   relation?: string;
   /** A few short lines on what they are like or care about. */
@@ -102,6 +106,8 @@ export interface PeopleReader {
   openCommitments(): Promise<{ person: string; commitment: PersonCommitment }[]>;
   /** People with a card (the owner described them), most recently updated first. */
   cards?(): Promise<PersonSummary[]>;
+  /** The departments and teams the first look found, as last saved. */
+  units?(): Promise<readonly OrgUnit[]>;
 }
 
 /** Capability "people.write": records that the owner talked with someone. Code-written one-liners only. */
@@ -109,6 +115,13 @@ export interface PeopleWriter {
   noteInteraction(identity: { name?: string; email?: string }, interaction: PersonInteraction): Promise<void>;
   /** Fills a person's card from what the owner said; empty fields keep what is there. Creates the person if new. */
   setProfile?(identity: { name?: string; email?: string }, profile: PersonProfile): Promise<void>;
+  /**
+   * What the first look read about a person (documents, signatures, attendees). Fills a field only when the owner never
+   * set it; a later scan may update what an earlier scan wrote. Creates the person if new.
+   */
+  fillFromScan?(identity: { name?: string; email?: string }, profile: PersonProfile): Promise<void>;
+  /** Replaces the saved department and team structure with what the latest first look found. */
+  setUnits?(units: readonly OrgUnit[]): Promise<void>;
 }
 
 /** Why a fact stopped holding. */

@@ -23,10 +23,8 @@ import { openSqliteStore } from '../../../src/core/store/sqlite.js';
 import type { ToolCallContext } from '../../../src/core/tools/types.js';
 import { mailSkill } from '../../../src/skills/mail/plugin.js';
 import type { MailIntentRegistry } from '../../../src/core/contracts/mail-intents.js';
-import { offerSuggestions } from '../../../src/skills/mail/triage-actions.js';
 import { readTriageConfig } from '../../../src/skills/mail/triage-config.js';
 import { TRIAGE_JOB, triageOnce } from '../../../src/skills/mail/triage-job.js';
-import { triageTexts } from '../../../src/skills/mail/triage-locale.js';
 import { createTestContext, FakeConfirmer, ScriptedLlm } from '../../support/context.js';
 
 const NOW = new Date('2026-11-19T09:00:00+09:00');
@@ -228,7 +226,9 @@ describe('mail triage', () => {
 
     await (await context.run()).followUps;
 
-    expect((context.confirmer as FakeConfirmer).requests[0]).toMatchObject({ toolName: 'skill.mail', topic: 'mail:event:m1' });
+    // one card: what came, then what to do with it
+    expect((context.confirmer as FakeConfirmer).requests[0]).toMatchObject({ toolName: 'skill.mail', topic: 'mail:ask:m1' });
+    expect((context.confirmer as FakeConfirmer).requests[0]?.choices?.map((choice) => choice.id)).toEqual(['event', 'later', 'no']);
     expect(context.calendarCalls).toHaveLength(1);
     expect(context.calendarCalls[0]?.input).toMatchObject({ title: '견적 회의', evidence: '11월 25일 오후 3시' });
     expect(context.calendarCalls[0]?.call.grounding.join('\n')).toContain('11월 25일 오후 3시');
@@ -253,7 +253,7 @@ describe('mail triage', () => {
     await (await context.run()).followUps;
 
     // no todo.add here: the card offers the team as the yes
-    expect(confirmer.requests[0]?.choices?.map((choice) => choice.id)).toEqual(['yes', 'later', 'no']);
+    expect(confirmer.requests[0]?.choices?.map((choice) => choice.id)).toEqual(['team', 'later', 'no']);
     expect(confirmer.requests[0]?.choices?.[0]?.label).toBe('팀에 맡기기');
     expect(handed).toEqual([{ request: expect.stringContaining('견적서 보내기'), ref: 'mail:m1', approvedByOwner: true }]);
     expect(context.notifier.notices.map((notice) => notice.text)).toContain("'견적서 보내기'을(를) 팀에 맡겼어요. 끝나면 알려 드릴게요.");
@@ -261,7 +261,7 @@ describe('mail triage', () => {
 
   it('writes the reply draft without asking and only asks whether to send it', async () => {
     const reply = { kind: 'reply', body: '확인하고 회신드릴게요.' };
-    const context = await seeded({ script: [triageJson({ importance: 'high', actions: [reply] })] });
+    const context = await seeded({ script: [triageJson({ importance: 'high', actions: [reply] })], config: { triage: { autoDraft: true } } });
     context.fake.inbox.push(mail('m1'));
 
     await (await context.run()).followUps;
@@ -274,9 +274,9 @@ describe('mail triage', () => {
     expect(context.notifier.notices.some((notice) => notice.text.includes('답장 초안을 써 뒀어요'))).toBe(true);
   });
 
-  it('with autoDraft off, asks before drafting, then asks to send, and never asks about the same mail twice', async () => {
+  it('by default tells what came first, drafts only when the owner picks a reply, then asks to send', async () => {
     const reply = { kind: 'reply', body: '확인하고 회신드릴게요.' };
-    const context = await seeded({ script: [triageJson({ importance: 'high', actions: [reply] })], config: { triage: { autoDraft: false } } });
+    const context = await seeded({ script: [triageJson({ importance: 'high', actions: [reply] })] });
     const message = mail('m1');
     context.fake.inbox.push(message);
 
@@ -284,16 +284,17 @@ describe('mail triage', () => {
 
     const requests = (context.confirmer as FakeConfirmer).requests;
     expect(requests.map((request) => request.toolName)).toEqual(['skill.mail', 'mail.send_draft']);
-    expect(requests[0]?.topic).toBe('mail:reply:m1');
-    expect(requests[0]?.note).toContain('확인하고 회신드릴게요.');
+    expect(requests[0]?.topic).toBe('mail:ask:m1');
+    expect(requests[0]?.note).toContain('미나 님이 견적 확인을 부탁했어요.');
+    expect(requests[0]?.choices?.[0]).toMatchObject({ id: 'reply', label: '답장 쓰기' });
     expect(requests[1]?.effects).toEqual(['send']);
     expect(context.fake.drafts).toHaveLength(1);
     expect(context.fake.sent).toEqual(['d1']);
     expect(context.audit.entries.some((entry) => entry.subject === 'mail.draft_reply')).toBe(true);
 
-    await offerSuggestions(context.ctx, message, [{ kind: 'reply', body: '다시' }], triageTexts('ko'));
+    await (await context.run()).followUps;
     expect(requests).toHaveLength(2);
-    expect(context.fake.drafts).toHaveLength(1);
+    expect(message.id).toBe('m1');
   });
 
   it('finds the file a document request asks for and attaches it to the draft', async () => {
@@ -380,7 +381,8 @@ describe('mail triage', () => {
     context.fake.inbox.push(mail('m1', { from: 'Billing <no-reply@service.example>' }));
     await (await context.run()).followUps;
     expect(context.fake.drafts).toHaveLength(0);
-    expect((context.confirmer as FakeConfirmer).requests.map((request) => request.topic)).toEqual(['mail:event:m1']);
+    expect((context.confirmer as FakeConfirmer).requests.map((request) => request.topic)).toEqual(['mail:ask:m1']);
+    expect((context.confirmer as FakeConfirmer).requests[0]?.choices?.map((choice) => choice.id)).toEqual(['event', 'later', 'no']);
   });
 
   it('skips a muted sender, a quiet domain and promotions without calling the model', async () => {
@@ -452,6 +454,35 @@ describe('mail.compose', () => {
     const context = await setup();
     const outcome = await context.ctx.tools.execute('mail.compose', { to: ['nobody'], subject: 's', body: 'b' }, { grounding: [] });
     expect(outcome.status).toBe('invalid_input');
+  });
+
+  it('for a meeting invite, checks the calendar and adds it with its link when it is not there', async () => {
+    const event = { kind: 'event', title: '견적 회의', date: { kind: 'month_day', month: 11, day: 25 }, time: { hour: 3, minute: 0, meridiem: 'pm' }, evidence: '11월 25일 오후 3시' };
+    const context = await seeded({ script: [triageJson({ kind: 'invitation', actions: [event] })] });
+    const listed: unknown[] = [];
+    context.ctx.provide(Contracts.calendarRead, { listEvents: async (range) => (listed.push(range), []) });
+    context.fake.inbox.push(mail('m1', { body: '11월 25일 오후 3시 회의 초대입니다. https://meet.google.com/abc-defg-hij' }));
+
+    await (await context.run()).followUps;
+
+    const card = (context.confirmer as FakeConfirmer).requests[0];
+    expect(card?.choices?.map((choice) => choice.id)).toEqual(['meeting', 'later', 'no']);
+    expect(card?.note).toContain('https://meet.google.com/abc-defg-hij');
+    expect(listed).toHaveLength(1);
+    expect(context.calendarCalls[0]?.input).toMatchObject({ title: '견적 회의', location: 'https://meet.google.com/abc-defg-hij' });
+    expect(context.notifier.notices.map((notice) => notice.text).join('\n')).toContain('10분 전에 참여 링크');
+    expect(context.fake.drafts).toHaveLength(0);
+  });
+
+  it('for a meeting already on the calendar, only says so', async () => {
+    const context = await seeded({ script: [triageJson({ kind: 'invitation', actions: [] })] });
+    context.ctx.provide(Contracts.calendarRead, {
+      listEvents: async () => [{ id: 'e1', title: '주간 회의', start: '2026-11-25T15:00:00+09:00', end: '2026-11-25T16:00:00+09:00', allDay: false, meetLink: 'https://meet.google.com/abc-defg-hij' }],
+    });
+    context.fake.inbox.push(mail('m1', { body: '회의 링크 https://meet.google.com/abc-defg-hij' }));
+    await (await context.run()).followUps;
+    expect(context.calendarCalls).toHaveLength(0);
+    expect(context.notifier.notices.map((notice) => notice.text).join('\n')).toContain("'주간 회의' 회의는 이미 캘린더에 있어요.");
   });
 });
 

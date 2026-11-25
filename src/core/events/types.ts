@@ -1,6 +1,6 @@
 import type { ConversationRef, IncomingMessage } from '../conversation/types.js';
 import type { DelegationEvent } from '../contracts/bots.js';
-import type { KnowledgeLine } from '../contracts/knowledge.js';
+import type { ScanResult } from '../contracts/knowledge.js';
 
 /**
  * Event names and payloads. Plugins add their own events with declaration merging:
@@ -20,7 +20,7 @@ export interface EventMap {
   /** A bot said something in its own room outside a reply (the result of a delegated task). */
   'bots.message': { bot: { id: string; name: string }; text: string; channel?: string; to?: { id: string; name: string } };
   /** The first-look scan (or a rescan) wrote what it found about the owner. */
-  'knowledge.scanned': { profile: readonly KnowledgeLine[]; projects: readonly KnowledgeLine[] };
+  'knowledge.scanned': ScanResult;
   /** A proactive notice (routine, mail, dev job…) actually reached the owner; the assistant keeps it in the owner thread. */
   'notice.delivered': { kind: string; text: string; at: string };
   /** The owner opened a lead meeting from the app (R17). */

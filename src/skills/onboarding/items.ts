@@ -27,8 +27,8 @@ const MAX_RICH_BYTES = 30_000_000;
 
 export const ACTIVE_FOLDERS_LABEL = '최근 90일 활동 폴더';
 const MAX_LOCAL_FILES = 400;
-/** The deep first look reads this many local files at most. */
-export const DEEP_LOCAL_FILES = 4_000;
+/** The deep first look reads every document in the chosen folders; this only stops a runaway walk. */
+export const DEEP_LOCAL_FILES = 100_000;
 const RECENT_DAYS = 90;
 const DAY_MS = 24 * 60 * 60 * 1000;
 
@@ -115,8 +115,10 @@ export function itemsFromWalk(walk: FolderWalk, maxFiles = MAX_LOCAL_FILES): Sca
       readable: true,
     }));
 
+  const rich = (file: FolderWalk['files'][number]): boolean => !file.readable && RICH_EXTS.has(file.ext) && file.size <= MAX_RICH_BYTES;
+  // Spreadsheets, slides and other documents with no converter still count by name: recurring reports show there.
   const files: ScanItem[] = walk.files
-    .filter((file) => file.readable || (RICH_EXTS.has(file.ext) && file.size <= MAX_RICH_BYTES))
+    .filter((file) => file.readable || rich(file) || DOC_EXTS.has(file.ext))
     .sort(byNewest)
     .slice(0, maxFiles)
     .map((file) => ({
@@ -127,8 +129,8 @@ export function itemsFromWalk(walk: FolderWalk, maxFiles = MAX_LOCAL_FILES): Sca
       title: file.name,
       modifiedAt: file.modifiedAt,
       size: file.size,
-      readable: true,
-      ...(file.readable ? {} : { rich: true }),
+      readable: file.readable || rich(file),
+      ...(rich(file) ? { rich: true } : {}),
     }));
 
   return [...repos, ...files];

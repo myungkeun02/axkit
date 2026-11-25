@@ -14,8 +14,9 @@ import type { ScanRoot } from './scan-walk.js';
 import { scanWalk } from './scan-walk.js';
 import { isInside } from './walk.js';
 
-const DEFAULT_MAX_ENTRIES = 20_000;
-const DEFAULT_MAX_DEPTH = 8;
+/** The first look reads every document in the chosen folders; this only stops a runaway walk. */
+const DEFAULT_MAX_ENTRIES = 200_000;
+const DEFAULT_MAX_DEPTH = 12;
 const REPO_COMMITS = 15;
 const README_BYTES = 4_000;
 

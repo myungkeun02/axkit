@@ -27,7 +27,8 @@ describe('configureLlm with subscription CLIs', () => {
       { id: 'claude-cli', kind: 'claude-cli', command: 'claude', priceIn: 0, priceOut: 0 },
     ]);
     expect(result.routes).toEqual([
-      { providerId: 'claude-cli', model: 'sonnet', tiers: ['standard', 'deep'], maxSensitivity: 'sensitive' },
+      { providerId: 'claude-cli', model: 'opus', tiers: ['deep'], maxSensitivity: 'sensitive' },
+      { providerId: 'claude-cli', model: 'sonnet', tiers: ['standard'], maxSensitivity: 'sensitive' },
       { providerId: 'claude-cli', model: 'haiku', tiers: ['fast'], maxSensitivity: 'sensitive' },
     ]);
 

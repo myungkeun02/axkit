@@ -90,7 +90,7 @@ export function knowledgeSkill(opts: KnowledgeSkillOptions = {}): Plugin {
             const counts = await store.replaceOrigin('scan', [...result.profile, ...result.projects]);
             await builder.rebuild();
             // R18: what the scan found (companies, projects) becomes the owner's bot groups and teams
-            await ctx.bus.emit('knowledge.scanned', { profile: result.profile, projects: result.projects });
+            await ctx.bus.emit('knowledge.scanned', { profile: result.profile, projects: result.projects, ...(result.units !== undefined ? { units: result.units } : {}), ...(result.routines !== undefined ? { routines: result.routines } : {}) });
             return counts;
           }),
         correct: async (id, text) => {

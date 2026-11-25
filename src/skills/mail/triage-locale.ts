@@ -37,11 +37,35 @@ export interface TriageTexts {
   readonly fileNotFound: (wants: string) => string;
   readonly spoofed: (who: string, subject: string, reason: 'dmarc' | 'spf-dkim' | 'display-name') => string;
   readonly checkFacts: (facts: readonly string[]) => string;
+  readonly askWhat: (who: string, subject: string) => string;
+  readonly chooseReply: string;
+  readonly chooseFiles: string;
+  readonly chooseMeeting: string;
+  readonly chooseEvent: string;
+  readonly chooseTodo: string;
+  readonly filesLine: (names: readonly string[]) => string;
+  readonly filesTitle: string;
+  readonly meetLine: (link: string) => string;
+  readonly meetFound: (title: string) => string;
+  readonly meetRemind: string;
+  readonly meetNoDate: (link: string | undefined) => string;
 }
 
 const KO: TriageTexts = {
+  askWhat: (who, subject) => `${who}님 메일 "${subject}" — 어떻게 할까요?`,
+  chooseReply: '답장 쓰기',
+  chooseFiles: '첨부 요약 보기',
+  chooseMeeting: '캘린더 확인·참여 알림',
+  chooseEvent: '일정 넣기',
+  chooseTodo: '할 일로',
+  filesLine: (names) => `첨부: ${names.join(', ')}`,
+  filesTitle: '첨부 파일 요약',
+  meetLine: (link) => `회의 링크: ${link}`,
+  meetFound: (title) => `'${title}' 회의는 이미 캘린더에 있어요.`,
+  meetRemind: '시작 10분 전에 참여 링크를 보내 드릴게요.',
+  meetNoDate: (link) => `메일에 날짜·시간이 없어서 캘린더에 넣지 못했어요.${link !== undefined ? ` 링크: ${link}` : ''}`,
   highLine: (who, subject, summary, suggestion) => `중요 메일 · ${who}: ${subject}\n${summary}\n제안: ${suggestion}`,
-  suggestReply: '답장 초안을 써 두고 보낼지 물어볼게요.',
+  suggestReply: '답장할지 물어볼게요.',
   suggestEvent: (title) => `'${title}' 일정을 캘린더에 넣을지 물어볼게요.`,
   suggestTodo: (text) => `'${text}'을(를) 할 일로 추가할지 물어볼게요.`,
   suggestNothing: '지금 따로 하실 일은 없어 보여요.',
@@ -83,6 +107,18 @@ const KO: TriageTexts = {
 };
 
 const EN: TriageTexts = {
+  askWhat: (who, subject) => `Mail from ${who}: "${subject}" — what should I do?`,
+  chooseReply: 'Write a reply',
+  chooseFiles: 'Summarize attachments',
+  chooseMeeting: 'Check calendar & remind',
+  chooseEvent: 'Add to calendar',
+  chooseTodo: 'Make it a to-do',
+  filesLine: (names) => `Attached: ${names.join(', ')}`,
+  filesTitle: 'Attachment summary',
+  meetLine: (link) => `Meeting link: ${link}`,
+  meetFound: (title) => `'${title}' is already on your calendar.`,
+  meetRemind: "I'll send the join link 10 minutes before it starts.",
+  meetNoDate: (link) => `The mail gives no date and time, so I didn't add it.${link !== undefined ? ` Link: ${link}` : ''}`,
   highLine: (who, subject, summary, suggestion) => `Important mail · ${who}: ${subject}\n${summary}\nSuggestion: ${suggestion}`,
   suggestReply: 'I will draft a reply and ask whether to send it.',
   suggestEvent: (title) => `I will ask whether to put "${title}" on your calendar.`,

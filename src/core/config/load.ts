@@ -4,6 +4,7 @@ import { homedir } from 'node:os';
 import { dirname, join } from 'node:path';
 import type { Config, ConfigInput } from './schema.js';
 import { ConfigSchema } from './schema.js';
+import { upgradeModels } from './model-upgrade.js';
 
 export class ConfigError extends Error {
   constructor(
@@ -79,7 +80,7 @@ export async function loadConfig(path: string): Promise<Config> {
   } catch {
     throw new ConfigError([], `Config file is not valid JSON: ${path}`);
   }
-  return parseConfig(raw);
+  return parseConfig(upgradeModels(raw));
 }
 
 export async function saveConfig(path: string, config: ConfigInput): Promise<void> {

@@ -11,6 +11,7 @@ import { memoryTexts } from './locale.js';
 import { registerMailScan } from './mail-job.js';
 import type { MailScanConfig } from './mail-job.js';
 import { PeopleStore } from './people-store.js';
+import { OrgUnitStore } from './people-units.js';
 import { memoryEventTool } from './tool-event.js';
 import { memoryForgetTool, memoryRecallTool, memoryRememberTool } from './tools-facts.js';
 import { peopleDoneTool, peopleNoteTool, peopleRecallTool } from './tools-people.js';
@@ -60,6 +61,8 @@ export function memorySkill(): Plugin {
       const people = new PeopleStore(ctx.kv, ctx.clock, language);
       await store.load();
       await people.load();
+      const units = new OrgUnitStore(ctx.kv);
+      await units.load();
 
       const deps = {
         store,
@@ -83,7 +86,7 @@ export function memorySkill(): Plugin {
       ctx.registerTool(peopleProfileTool(people));
       ctx.registerTool(peopleListTool(people));
       ctx.bus.on('app.started', () => {
-        ctx.tryUse(Contracts.appViews)?.register(peopleView(people, language === 'en' ? 'People' : '사람'));
+        ctx.tryUse(Contracts.appViews)?.register(peopleView(people, language === 'en' ? 'People' : '사람', units));
       });
 
       ctx.provide(Contracts.memoryRead, {
@@ -99,11 +102,16 @@ export function memorySkill(): Plugin {
         setProfile: async (identity, profile) => {
           await people.setProfile(identity, profile);
         },
+        fillFromScan: async (identity, profile) => {
+          await people.fillFromScan(identity, profile);
+        },
+        setUnits: (found) => units.replace(found),
       });
       ctx.provide(Contracts.peopleRead, {
         find: (nameOrEmail) => people.find(nameOrEmail),
         openCommitments: () => people.openCommitments(),
         cards: () => people.cards(),
+        units: async () => units.all(),
       });
 
       registerExpiry(ctx, store, texts);

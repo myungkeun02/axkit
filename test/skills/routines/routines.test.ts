@@ -130,6 +130,18 @@ describe('routines', () => {
     expect(dueOn(weekly, new Date('2026-11-17T14:30:00+09:00'), 'Asia/Seoul')).toBe(false);
     expect(routineScheduleSchema.safeParse({ kind: 'every', hours: 0 }).success).toBe(false);
   });
+
+  it('runs a monthly routine on its day, or the last day of a shorter month', () => {
+    const last = routineScheduleSchema.parse(scheduleFromText('monthly last 09:00'));
+    expect(last).toEqual({ kind: 'monthly', day: -1, at: '09:00' });
+    expect(scheduleLabel(last, true)).toBe('매월 말일 오전 9시');
+    expect(dueOn(last, new Date('2026-11-30T09:00:00+09:00'), 'Asia/Seoul')).toBe(true);
+    expect(dueOn(last, new Date('2026-11-29T09:00:00+09:00'), 'Asia/Seoul')).toBe(false);
+    const day31 = { kind: 'monthly' as const, day: 31, at: '09:00' };
+    expect(dueOn(day31, new Date('2026-02-28T09:00:00+09:00'), 'Asia/Seoul')).toBe(true);
+    expect(dueOn({ kind: 'monthly', day: 5, at: '09:00' }, new Date('2026-12-05T09:00:00+09:00'), 'Asia/Seoul')).toBe(true);
+    expect(routineScheduleSchema.safeParse({ kind: 'monthly', day: 0, at: '09:00' }).success).toBe(false);
+  });
 });
 
 function appModel(): LlmProvider {
